@@ -13,8 +13,8 @@ export default function Dashboard() {
             <Head title="Pengajuan" />
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p6 border-l-4">
-                        <h3 className="text-lg font-bold text-gray-900 mb-4">INFORMASI PENGAJU</h3>
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p6">
+                        <h3 className="text-lg font-bold text-gray-900 text-center m-4">INFORMASI PENGAJU</h3>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm bg-gray-50 p-4 rounded-md border">
                             <div><span className="text-gray-500 block text-xs uppercase font-bold">Nama</span>{user.name}</div>
                             <div><span className="text-gray-500 block text-xs uppercase font-bold">Email</span>{user.email}</div>
