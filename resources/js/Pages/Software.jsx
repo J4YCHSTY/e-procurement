@@ -43,10 +43,16 @@ const SoftwareForm = () =>  {
                 <div className="grid grid-cols-1 md:grid-cols-3 bg-gray-50 p-4 gap-6 border rounded-md">
                     <div className="pb-4">
                         <label className="block font-medium text-sm text-gray-700 mb-2">Jumlah Lisensi / User <span className="text-red-500">*</span></label>
-                        
+                        <input type="number" min="1" defaultValue="1" className="border-gray-300 focus:border-gray-600 focus:ring-gray-500 rounded-md shadow-sm w-full" required/>
                     </div>
                     <div className="pb-4">
-                        
+                        <label className="block font-medium text-sm text-gray-700 mb-2">Durasi (Bulan) <span className="text-red-500">*</span></label>
+                        <input type="number" min="1" placeholder="Contoh: 12 (untuk 12 bulan)" className="border-gray-300 focus:border-gray-600 focus:ring-gray-500 rounded-md shadow-sm w-full" disabled={softwareType === 'License'}/>
+                        <p className="text-xs text-gray-500 mt-1"><span className="text-red-500">* Kosongkan jika tidak ada durasi spesifik</span></p>
+                    </div>
+                    <div className="pb-4">
+                        <label className="block font-medium text-sm text-gray-700 mb-2">Total Biaya (Rp) <span className="text-red-500">*</span></label>
+                        <input type="number" placeholder="Contoh: 1000000 (untuk Rp. 1.000.000,00)" className="border-gray-300 focus:border-gray-600 focus:ring-gray-500 rounded-md shadow-sm w-full" />
                     </div>
                 </div>
                 <div>
