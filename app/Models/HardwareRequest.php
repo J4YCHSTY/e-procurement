@@ -14,5 +14,5 @@ class HardwareRequest extends Model
         'justification',
         'digital_signature',
         'status',
-    ]
+    ];
 }
