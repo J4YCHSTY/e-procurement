@@ -36,7 +36,10 @@ class RequestController extends Controller
         $validateData = $request->validate([
             'request_date' => 'required|date',
             'software_name' => 'required|string|max:255',
-            'software_recommendation' => 'nullable|string|max:255',
+            'software_type' => 'nullable|string|max:255',
+            'license_count' => 'required|integer|min:1',
+            'duration_months' => 'required|integer|min:1',
+            'estimated_cost' => 'required|numeric|min:0',
             'justification' => 'required|string',
             'digital_signature' => 'required|boolean'
         ]);
@@ -45,7 +48,10 @@ class RequestController extends Controller
         $softwareRequest->user_id = Auth::id();
         $softwareRequest->request_date = $validateData['request_date'];
         $softwareRequest->software_name = $validateData['software_name'];
-        $softwareRequest->software_recommendation = $validateData['software_recommendation'];
+        $softwareRequest->software_type = $validateData['software_type'];
+        $softwareRequest->license_count = $validateData['license_count'];
+        $softwareRequest->duration_months = $validateData['duration_months'];
+        $softwareRequest->estimated_cost = $validateData['estimated_cost'];
         $softwareRequest->justification = $validateData['justification'];
         $softwareRequest->digital_signature = $validateData['digital_signature'];
         $softwareRequest->status = 'Pending';

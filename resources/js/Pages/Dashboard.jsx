@@ -7,6 +7,7 @@ import { Head, usePage } from "@inertiajs/react";
 export default function Dashboard() {
     const user = usePage().props.auth.user;
     const [onRequest, setRequest] = useState("");
+    const { flash } = usePage().props;
 
     return (
         <AuthenticatedLayout header={<h2 className="font-bold text-xl text-gray-800 loading-tight">PENGAJUAN</h2>}>
