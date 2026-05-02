@@ -5,17 +5,18 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, usePage } from "@inertiajs/react";
 
 export default function Dashboard() {
-    const user = usePage().props.auth.user;
+    const { auth, flash, hardwareHistory, softwareHistory } = usePage().props;
+    const user = auth.user;
     const [onRequest, setRequest] = useState("");
-    const { flash } = usePage().props;
+    const [requestCategory, setRequestCategory] = useState("");
 
     return (
         <AuthenticatedLayout header={<h2 className="font-bold text-xl text-gray-800 loading-tight">PENGAJUAN</h2>}>
             <Head title="Pengajuan" />
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p6">
-                        <h3 className="text-lg font-bold text-gray-900 text-center m-4">INFORMASI PENGAJU</h3>
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                        <h3 className="text-lg font-bold text-gray-900 text-center m-4">INFORMASI USER</h3>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm bg-gray-50 p-4 rounded-md border">
                             <div><span className="text-gray-500 block text-xs uppercase font-bold">Nama</span>{user.name}</div>
                             <div><span className="text-gray-500 block text-xs uppercase font-bold">Email</span>{user.email}</div>
@@ -37,6 +38,61 @@ export default function Dashboard() {
 
                     {onRequest === "HARDWARE" && <HardwareForm />}
                     {onRequest === "SOFTWARE" && <SoftwareForm />}
+
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mt-8">
+                        <h3 className="text-lg-font-bold text-gray-900 mb-4 border-b pb-2">
+                            RIWAYAT PENGAJUAN
+                        </h3>
+                        {(!hardwareHistory || hardwareHistory.length === 0) && (!softwareHistory || softwareHistory.length === 0) ? (
+                            <div className="text-center py-8 bg-gray-50 rounded-md">
+                                <p className="text-gray-500 text-sm">
+                                    USER BELUM PERNAH MENGAJUKAN FORM REQUEST APAPUN.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-center text-gray-500">
+                                    <thead className="text-xs text-gray-700 uppercase bg-gray-100">
+                                        <tr>
+                                            <th className="px-6 py-4">Tanggal Pengajuan</th>
+                                            <th className="px-6 py-4">Kategori Pengajuan</th>
+                                            <th className="px-6 py-4">Spesifikasi / Nama Item</th>
+                                            <th className="px-6 py-4">Status Pengajuan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {hardwareHistory && hardwareHistory.map((req) => (
+                                            <tr key={`hw-${req.id}`}className="bg-white transition">
+                                                <td className="px-6 py-4 font-medium text-gray-900">{req.request_date}</td>
+                                                <td className="px-6 py-4"><span className="px-3 py-1 font-bold text-blue-500 rounded-full text-xs tracking-wide">HARDWARE</span></td>
+                                                <td className="px-6 py-4 font-medium text-gray-900">{req.hardware_type}</td>
+                                                <td className="px-6 py-4 font-medium"><span className={`px-2 py-1 text-xs rounded-md font-semibold ${
+                                                    req.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                    req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                    'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {req.status}
+                                                </span></td>
+                                            </tr>
+                                        ))}
+
+                                        {softwareHistory && softwareHistory.map((req) => (
+                                            <tr key={`sw-${req.id}`} className="bg-white transition">
+                                                <td className="px-6 py-4 font-medium text-gray-900">{req.request_date}</td>
+                                                <td className="px-6 py-4"><span className="px-3 py-1 font-bold text-green-500 rounded-full text-xs tracking-wide">SOFTWARE</span></td>
+                                                <td className="px-6 py-4 font-medium text-gray-900">{req.software_name}</td>
+                                                <td className="px-6 py-4"><span className={`px-2 py-1 text-xs rounded-md font-semibold ${
+                                                    req.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                    req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                    'bg-red-100 text-red-800'
+                                                }`}>{req.status}</span></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>
