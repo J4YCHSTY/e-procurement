@@ -5,10 +5,13 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, usePage } from "@inertiajs/react";
 
 export default function Dashboard() {
-    const { auth, flash, hardwareHistory, softwareHistory } = usePage().props;
+    const { auth, flash, hardwareHistory, softwareHistory, pendingApprovals } = usePage().props;
     const user = auth.user;
     const [onRequest, setRequest] = useState("");
     const [requestCategory, setRequestCategory] = useState("");
+    const [activeTab, setActiveTab] = useState("");
+    const isManager = user.position.toLowerCase().includes("manager") || user.position.toLowerCase().includes("head");
+    const handleApproval = (id, action) => {alert(`Simulasi: ${action} dengan pengajuan ID ${id}`)};
 
     return (
         <AuthenticatedLayout header={<h2 className="font-bold text-xl text-gray-800 loading-tight">PENGAJUAN</h2>}>
@@ -22,6 +25,24 @@ export default function Dashboard() {
                             <div><span className="text-gray-500 block text-xs uppercase font-bold">Email</span>{user.email}</div>
                             <div><span className="text-gray-500 block text-xs uppercase font-bold">Perusahaan</span>{user.entity}</div>
                             <div><span className="text-gray-500 block text-xs uppercase font-bold">Jabatan</span>{user.position}</div>
+                        </div>
+                    </div>
+                    <div className="bg-white shadow-md sm-rounded-lg overflow-hidden">
+                        <div className="flex">
+                            <button onClick={() => setActiveTab('create')} className={`flex-1 py-4 px-6 text-center font-bold text-sm transition-colors ${activeTab === 'create' ? 'bg-black text-white' : 'text-black hover:bg-gray-50'}`}>
+                                BUAT PENGAJUAN BARU
+                            </button>
+                            <button onClick={() => setActiveTab('history')} className={`flex-1 py-4 px-6 text-center font-bold text-sm transition-colors ${activeTab === 'history' ? 'bg-black text-white' : 'text-black hover:bg-gray-50'}`}>
+                                RIWAYAT PENGAJUAN
+                            </button>
+                            {isManager && (
+                                <button onClick={() => setActiveTab('approval')} className={`flex-1 py-4 px-6 text-center font-bold text-sm transition-colors ${activeTab === 'approval' ? 'bg-black text-white' : 'text-black hover:bg-gray-50'}`}>
+                                    PENYETUJUAN PENGAJUAN
+                                    {pendingApprovals && pendingApprovals.length > 0 && (
+                                        <span className="absolute top-2 right-4 bg-red-500 text-white text-xs font-bold px-2 py-0 5 rounded-full">{pendingApprovals.length}</span>
+                                    )}
+                                </button>
+                            )}
                         </div>
                     </div>
                     <div className="bg-white overflow-hidden shadow-md sm:rounded-lg p-6">
