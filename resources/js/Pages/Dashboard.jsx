@@ -45,25 +45,29 @@ export default function Dashboard() {
                             )}
                         </div>
                     </div>
-                    <div className="bg-white overflow-hidden shadow-md sm:rounded-lg p-6">
-                        <label lassName="font-bold block text-sm text-gray-700 mb-2">
-                            PILIH JENIS PENGAJUAN
-                        </label>
-                        <br></br>
-                        <select className="border-gray-300 focus:border-indigo 600 focus:ring-indigo-500 rounded-sm shadow-sm w-full md:w-1/3" value={onRequest} onChange={(e) => setRequest(e.target.value)}>
-                            <option value="">-- PILIH PENGAJUAN --</option>
-                            <option value="HARDWARE">HARDWARE</option>
-                            <option value="SOFTWARE">SOFTWARE</option>
-                        </select>
-                    </div>
+                    {activeTab === 'create' && (
+                        <div className="space-y-6 animate-fade-in-up">
+                            <div className="bg-white overflow-hidden shadow-md sm:rounded-lg p-6">
+                                <label lassName="font-bold block text-sm text-gray-700 mb-2">
+                                    PILIH KATEGORI PENGJUAN
+                                </label>
+                                <br></br>
+                                <select className="border-gray-300 focus:border-indigo 600 focus:ring-indigo-500 rounded-sm shadow-sm w-full md:w-1/3" value={onRequest} onChange={(e) => setRequest(e.target.value)}>
+                                    <option value="">-- Silahkan Pilih Kategori Pengajuan --</option>
+                                    <option value="HARDWARE">HARDWARE</option>
+                                    <option value="SOFTWARE">SOFTWARE</option>
+                                </select>
+                            </div>
 
-                    {onRequest === "HARDWARE" && <HardwareForm />}
-                    {onRequest === "SOFTWARE" && <SoftwareForm />}
-
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mt-8">
-                        <h3 className="text-lg-font-bold text-gray-900 mb-4 border-b pb-2">
-                            RIWAYAT PENGAJUAN
-                        </h3>
+                            {onRequest === "HARDWARE" && <HardwareForm user={user} />}
+                            {onRequest === "SOFTWARE" && <SoftwareForm user={user} />}
+                        </div>
+                    )}
+                    {activeTab === 'history' && (
+                        <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mt-8">
+                            <h3 className="text-lg-font-bold text-gray-900 mb-4 border-b pb-2">
+                                RIWAYAT PENGAJUAN
+                            </h3>
                         {(!hardwareHistory || hardwareHistory.length === 0) && (!softwareHistory || softwareHistory.length === 0) ? (
                             <div className="text-center py-8 bg-gray-50 rounded-md">
                                 <p className="text-gray-500 text-sm">
@@ -114,6 +118,33 @@ export default function Dashboard() {
                             </div>
                         )}
                     </div>
+                    )}
+                    {activeTab === 'approval' && isManager && (
+                        <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 animate-fade-in-up">
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">DAFTAR REQUEST PENGAJUAN</h3>
+                            <p className="text-sm text-gray-500 mb-6">APPROVE/REJECT</p>
+                            {(!pendingApprovals || pendingApprovals.length === 0) ? (
+                                <p className="text-gray-500 text-sm text-center py-8 bg-gray-50 rounded-md">
+                                    Tidak Ada Pengajuan Yang Aktif
+                                </p>
+                            ) : (
+                                <div className="grid-grid-cols-1 gap-4">
+                                    {pendingApprovals.map((req) => (
+                                        <div key={`approval-${req.id}`} className="flex flex-col md:flex-row justify-between items-center bg-white rounded-lg shadow-sm hover:shadow-md transition">
+                                            <div className="flex-1 mb-4 md:mb-0">
+                                                <div className="flex-items-center gap-2 mb-1">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${req.type === 'Hardware' ? 'bg-blue-500' : 'bg-green-500'}`}>
+                                                        {req.type.toUpperCase()}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 font-medium">{req.request_date}  </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </AuthenticatedLayout>
