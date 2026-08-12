@@ -14,6 +14,12 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * Tabel auth digabung dengan data karyawan (master_employees),
+     * biar nggak ada dua sumber data buat satu orang yang sama.
+     */
+    protected $table = 'master_employees';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -49,5 +55,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Departemen tempat karyawan ini bernaung.
+     * Dipakai nanti buat filter approval per departemen.
+     */
+    public function departement()
+    {
+        return $this->belongsTo(Departement::class, 'departement_id');
     }
 }

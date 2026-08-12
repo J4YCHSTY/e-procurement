@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\HardwareRequest;
 use App\Models\SoftwareRequest;
+use App\Enums\RequestStatus;
 use Illuminate\Support\Facades\Auth;
 
 class RequestController extends Controller
@@ -25,7 +26,7 @@ class RequestController extends Controller
         $hardwareRequest->hardware_recommendation = $validatedData['hardware_recommendation'];
         $hardwareRequest->justification = $validatedData['justification'];
         $hardwareRequest->digital_signature = $validatedData['digital_signature'];
-        $hardwareRequest->status = 'Pending';
+        $hardwareRequest->status = RequestStatus::WaitingHeadApproval->value;
         $hardwareRequest->save();
 
         return redirect()->back()->with('success', 'Form Request Hardware Berhasil Dikirim.');
@@ -54,7 +55,7 @@ class RequestController extends Controller
         $softwareRequest->estimated_cost = $validateData['estimated_cost'];
         $softwareRequest->justification = $validateData['justification'];
         $softwareRequest->digital_signature = $validateData['digital_signature'];
-        $softwareRequest->status = 'Pending';
+        $softwareRequest->status = RequestStatus::WaitingHeadApproval->value;
         $softwareRequest->save();
 
         return redirect()->back()->with('success', 'Form Request Software Berhasil Dikirim.');

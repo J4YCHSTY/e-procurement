@@ -2,16 +2,42 @@ import { useState } from "react";
 import HardwareForm from "./Hardware";
 import SoftwareForm from "./Software";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, usePage } from "@inertiajs/react";
+import { Head, usePage, router } from "@inertiajs/react";
+
+// Label & warna badge status, disamain sama App\Enums\RequestStatus di backend.
+const STATUS_META = {
+    WAITING_FOR_HEAD_APPROVAL: { label: "Menunggu Approval Kepala Departemen", className: "bg-yellow-100 text-yellow-800" },
+    WAITING_FOR_IT_APPROVAL: { label: "Menunggu Approval Tim IT", className: "bg-yellow-100 text-yellow-800" },
+    WAITING_FOR_FINANCE_APPROVAL: { label: "Menunggu Approval Finance", className: "bg-yellow-100 text-yellow-800" },
+    APPROVED: { label: "Disetujui", className: "bg-green-100 text-green-800" },
+    REJECTED: { label: "Ditolak", className: "bg-red-100 text-red-800" },
+};
+
+function StatusBadge({ status }) {
+    const meta = STATUS_META[status] ?? { label: status, className: "bg-gray-100 text-gray-800" };
+    return (
+        <span className={`px-2 py-1 text-xs rounded-md font-semibold ${meta.className}`}>
+            {meta.label}
+        </span>
+    );
+}
 
 export default function Dashboard() {
-    const { auth, flash, hardwareHistory, softwareHistory, pendingApprovals } = usePage().props;
+    const { auth, flash, hardwareHistory, softwareHistory, pendingApprovals, canApprove } = usePage().props;
     const user = auth.user;
     const [onRequest, setRequest] = useState("");
     const [requestCategory, setRequestCategory] = useState("");
     const [activeTab, setActiveTab] = useState("");
-    const isManager = user.position.toLowerCase().includes("manager") || user.position.toLowerCase().includes("head");
-    const handleApproval = (id, action) => {alert(`Simulasi: ${action} dengan pengajuan ID ${id}`)};
+    const [processingId, setProcessingId] = useState(null);
+
+    const handleApproval = (item, action) => {
+        const routeName = `request.${item.type.toLowerCase()}.${action}`;
+        setProcessingId(item.id);
+        router.post(route(routeName, item.id), {}, {
+            preserveScroll: true,
+            onFinish: () => setProcessingId(null),
+        });
+    };
 
     return (
         <AuthenticatedLayout header={<h2 className="font-bold text-xl text-gray-800 loading-tight">PENGAJUAN</h2>}>
@@ -35,7 +61,7 @@ export default function Dashboard() {
                             <button onClick={() => setActiveTab('history')} className={`flex-1 py-4 px-6 text-center font-bold text-sm transition-colors ${activeTab === 'history' ? 'bg-black text-white' : 'text-black hover:bg-gray-50'}`}>
                                 RIWAYAT PENGAJUAN
                             </button>
-                            {isManager && (
+                            {canApprove && (
                                 <button onClick={() => setActiveTab('approval')} className={`flex-1 py-4 px-6 text-center font-bold text-sm transition-colors ${activeTab === 'approval' ? 'bg-black text-white' : 'text-black hover:bg-gray-50'}`}>
                                     PENYETUJUAN PENGAJUAN
                                     {pendingApprovals && pendingApprovals.length > 0 && (
@@ -91,13 +117,7 @@ export default function Dashboard() {
                                                 <td className="px-6 py-4 font-medium text-gray-900">{req.request_date}</td>
                                                 <td className="px-6 py-4"><span className="px-3 py-1 font-bold text-blue-500 rounded-full text-xs tracking-wide">HARDWARE</span></td>
                                                 <td className="px-6 py-4 font-medium text-gray-900">{req.hardware_type}</td>
-                                                <td className="px-6 py-4 font-medium"><span className={`px-2 py-1 text-xs rounded-md font-semibold ${
-                                                    req.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                    req.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                    'bg-red-100 text-red-800'
-                                                }`}>
-                                                    {req.status}
-                                                </span></td>
+                                                <td className="px-6 py-4 font-medium"><StatusBadge status={req.status} /></td>
                                             </tr>
                                         ))}
 
@@ -106,11 +126,7 @@ export default function Dashboard() {
                                                 <td className="px-6 py-4 font-medium text-gray-900">{req.request_date}</td>
                                                 <td className="px-6 py-4"><span className="px-3 py-1 font-bold text-green-500 rounded-full text-xs tracking-wide">SOFTWARE</span></td>
                                                 <td className="px-6 py-4 font-medium text-gray-900">{req.software_name}</td>
-                                                <td className="px-6 py-4"><span className={`px-2 py-1 text-xs rounded-md font-semibold ${
-                                                    req.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                    req.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                    'bg-red-100 text-red-800'
-                                                }`}>{req.status}</span></td>
+                                                <td className="px-6 py-4"><StatusBadge status={req.status} /></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -119,7 +135,7 @@ export default function Dashboard() {
                         )}
                     </div>
                     )}
-                    {activeTab === 'approval' && isManager && (
+                    {activeTab === 'approval' && canApprove && (
                         <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 animate-fade-in-up">
                             <h3 className="text-lg font-bold text-gray-900 mb-2">DAFTAR REQUEST PENGAJUAN</h3>
                             <p className="text-sm text-gray-500 mb-6">APPROVE/REJECT</p>
@@ -128,16 +144,37 @@ export default function Dashboard() {
                                     Tidak Ada Pengajuan Yang Aktif
                                 </p>
                             ) : (
-                                <div className="grid-grid-cols-1 gap-4">
-                                    {pendingApprovals.map((req) => (
-                                        <div key={`approval-${req.id}`} className="flex flex-col md:flex-row justify-between items-center bg-white rounded-lg shadow-sm hover:shadow-md transition">
-                                            <div className="flex-1 mb-4 md:mb-0">
-                                                <div className="flex-items-center gap-2 mb-1">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${req.type === 'Hardware' ? 'bg-blue-500' : 'bg-green-500'}`}>
-                                                        {req.type.toUpperCase()}
+                                <div className="grid grid-cols-1 gap-4">
+                                    {pendingApprovals.map((item) => (
+                                        <div key={`${item.type}-${item.id}`} className="flex flex-col md:flex-row justify-between md:items-center bg-white border rounded-lg shadow-sm hover:shadow-md transition p-4 gap-4">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${item.type === 'Hardware' ? 'bg-blue-500' : 'bg-green-500'}`}>
+                                                        {item.type.toUpperCase()}
                                                     </span>
-                                                    <span className="text-xs text-gray-500 font-medium">{req.request_date}  </span>
+                                                    <span className="text-xs text-gray-500 font-medium">{item.request_date}</span>
+                                                    <StatusBadge status={item.status} />
                                                 </div>
+                                                <p className="font-bold text-gray-900">{item.title}</p>
+                                                {item.detail && <p className="text-sm text-gray-600">{item.detail}</p>}
+                                                <p className="text-xs text-gray-500 mt-1">Pemohon: {item.requester_name ?? '-'}</p>
+                                                <p className="text-xs text-gray-500 italic mt-1">"{item.justification}"</p>
+                                            </div>
+                                            <div className="flex gap-2 shrink-0">
+                                                <button
+                                                    onClick={() => handleApproval(item, 'approve')}
+                                                    disabled={processingId === item.id}
+                                                    className="px-4 py-2 text-sm font-bold text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    onClick={() => handleApproval(item, 'reject')}
+                                                    disabled={processingId === item.id}
+                                                    className="px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                                                >
+                                                    Reject
+                                                </button>
                                             </div>
                                         </div>
                                     ))}

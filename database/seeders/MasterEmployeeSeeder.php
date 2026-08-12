@@ -4,12 +4,16 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\MasterEmployee;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class MasterEmployeeSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * Password default semua akun dummy ini: "password"
+     * (dipakai buat login pas testing alur approval tiap role)
      */
     public function run(): void
     {
@@ -24,7 +28,10 @@ class MasterEmployeeSeeder extends Seeder
         ];
 
         foreach ($employees as $emp) {
-            MasterEmployee::create($emp);
+            User::create(array_merge($emp, [
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]));
         }
     }
 }

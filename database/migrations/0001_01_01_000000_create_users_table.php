@@ -11,19 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('entity')->nullable();
-            $table->string('position')->nullable();
-            $table->foreignId('departement_id')->nullable()->constrained('departements')->onDelete('set null');
-            $table->string('role')->default('user');
-            $table->string('password');
-            $table->rememberToken();
-            $table->timestamps();
-        });
+        // Tabel 'users' sudah digabung ke 'master_employees' (lihat migration
+        // 2026_03_28_124703_create_master_employees_table.php). Satu orang = satu baris data,
+        // nggak perlu dua tabel terpisah buat auth vs data karyawan.
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
@@ -46,7 +36,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
     }

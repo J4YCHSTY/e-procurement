@@ -1,12 +1,11 @@
 <?php
 
-use App\Models\HardwareRequest;
-use App\Models\SoftwareRequest;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RequestController;
+use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -18,16 +17,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    $userId = Auth::id();
-    $hardwareHistory = HardwareRequest::where('user_id', $userId)->get();
-    $softwareHistory = SoftwareRequest::where('user_id', $userId)->get();
-
-    return Inertia::render('Dashboard',[
-        'hardwareHistory' => $hardwareHistory,
-        'softwareHistory' => $softwareHistory,
-    ]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -35,6 +27,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/request/hardware', [RequestController::class, 'storeHardware'])->name('request.hardware.store');
     Route::post('/request/software', [RequestController::class, 'storeSoftware'])->name('request.software.store');
+
+    Route::post('/request/hardware/{hardwareRequest}/approve', [ApprovalController::class, 'approveHardware'])->name('request.hardware.approve');
+    Route::post('/request/hardware/{hardwareRequest}/reject', [ApprovalController::class, 'rejectHardware'])->name('request.hardware.reject');
+    Route::post('/request/software/{softwareRequest}/approve', [ApprovalController::class, 'approveSoftware'])->name('request.software.approve');
+    Route::post('/request/software/{softwareRequest}/reject', [ApprovalController::class, 'rejectSoftware'])->name('request.software.reject');
 });
 
 require __DIR__.'/auth.php';

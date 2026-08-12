@@ -15,10 +15,13 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->string('entity');
-            $table->string('position');
-            $table->foreignId('departement_id')->constrained('departements')->onDelete('cascade');
-            $table->enum('role', ['user', 'head', 'it', 'finance', 'procurement']);
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('entity')->nullable();
+            $table->string('position')->nullable();
+            $table->foreignId('departement_id')->nullable()->constrained('departements')->onDelete('set null');
+            $table->enum('role', ['user', 'head', 'it', 'finance', 'procurement'])->default('user');
+            $table->string('password');
+            $table->rememberToken();
             $table->timestamps();
         });
     }

@@ -18,4 +18,9 @@ class SoftwareRequest extends Model
         'digital_signature',
         'status',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

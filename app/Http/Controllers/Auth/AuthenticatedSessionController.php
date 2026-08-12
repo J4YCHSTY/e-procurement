@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Models\MasterEmployee;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\Controller;
 // use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -36,25 +34,16 @@ class AuthenticatedSessionController extends Controller
             'email' => 'required|email',
         ]);
 
-        $master = MasterEmployee::where('email', $request->email)->first();
+        // Simulasi SSO: cukup cek apakah email ini terdaftar sebagai karyawan.
+        // Karena master_employees SEKARANG adalah tabel auth itu sendiri (bukan
+        // tabel terpisah lagi), nggak perlu proses sync/updateOrCreate ke tabel lain.
+        $user = User::where('email', $request->email)->first();
 
-        if (!$master) {
+        if (!$user) {
             return back()->withErrors([
                 'email' => 'EMAIL TIDAK TERDAFTAR PADA DATABASE',
             ]);
         }
-
-        $user = User::updateOrCreate(
-            ['email' => $master->email],
-            [
-                'name' => $master->name,
-                'entity' => $master->entity,
-                'position' => $master->position,
-                'departement_id' => $master->departement_id,
-                'role' => $master->role,
-                'password' => Hash::make('SSO_DUMMY_PASSWORD')
-            ]
-        );
 
         Auth::login($user);
 
