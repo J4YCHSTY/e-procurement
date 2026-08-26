@@ -12,9 +12,10 @@ class MasterEmployeeSeeder extends Seeder
     /**
      * Run the database seeds.
      *
-     * Password default semua akun dummy ini: "@visinema2026"
-     * (bisa dipakai buat login pertama kali, nanti user ganti sendiri lewat
-     * halaman Profil). Kalau database kamu udah pernah di-seed sebelum
+     * Password default semua akun dummy ini diambil dari .env
+     * (DEFAULT_USER_PASSWORD) - lihat App\Models\User::defaultPassword().
+     * Bisa dipakai buat login pertama kali, nanti user ganti sendiri lewat
+     * halaman Profil. Kalau database kamu udah pernah di-seed sebelum
      * password default ini diganti, jalanin `php artisan users:reset-default-password`
      * biar akun yang udah ada ikut ke-update tanpa perlu migrate:fresh.
      */
@@ -32,7 +33,7 @@ class MasterEmployeeSeeder extends Seeder
 
         foreach ($employees as $emp) {
             User::create(array_merge($emp, [
-                'password' => Hash::make('@visinema2026'),
+                'password' => Hash::make(User::defaultPassword()),
                 'email_verified_at' => now(),
             ]));
         }

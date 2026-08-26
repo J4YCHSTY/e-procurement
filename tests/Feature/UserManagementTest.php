@@ -78,7 +78,7 @@ class UserManagementTest extends TestCase
 
         $newUser = User::where('email', 'baru@office.com')->first();
         $this->assertNotNull($newUser);
-        $this->assertTrue(Hash::check(User::DEFAULT_PASSWORD, $newUser->password));
+        $this->assertTrue(Hash::check(User::defaultPassword(), $newUser->password));
         $this->assertTrue($newUser->is_active);
     }
 
@@ -182,7 +182,7 @@ class UserManagementTest extends TestCase
         $response = $this->actingAs($it)->post(route('users.reset-password', $target->id));
 
         $response->assertRedirect();
-        $this->assertTrue(Hash::check(User::DEFAULT_PASSWORD, $target->fresh()->password));
+        $this->assertTrue(Hash::check(User::defaultPassword(), $target->fresh()->password));
     }
 
     public function test_non_it_cannot_reset_password(): void

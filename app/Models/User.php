@@ -24,8 +24,19 @@ class User extends Authenticatable
      * atau buat reset password (baik lewat User Management maupun command
      * `users:reset-default-password`). User diarahkan ganti sendiri lewat
      * halaman Profil setelah login pertama kali.
+     *
+     * Nilainya sengaja diambil dari .env (DEFAULT_USER_PASSWORD), BUKAN
+     * di-hardcode di sini, biar nggak ke-push ke Git sebagai plaintext
+     * credential. Kalau belum diatur di .env, method ini bakal throw
+     * biar ketauan dari awal daripada diam-diam bikin akun tanpa password.
      */
-    public const DEFAULT_PASSWORD = '@visinema2026';
+    public static function defaultPassword(): string
+    {
+        return config('app.default_user_password')
+            ?? throw new \RuntimeException(
+                'DEFAULT_USER_PASSWORD belum diatur di file .env. Tambahkan baris DEFAULT_USER_PASSWORD=... sebelum membuat/reset akun.'
+            );
+    }
 
     /**
      * The attributes that are mass assignable.

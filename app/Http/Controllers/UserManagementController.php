@@ -43,11 +43,11 @@ class UserManagementController extends Controller
 
         User::create([
             ...$validated,
-            'password' => Hash::make(User::DEFAULT_PASSWORD),
+            'password' => Hash::make(User::defaultPassword()),
             'email_verified_at' => now(),
         ]);
 
-        return back()->with('success', 'Akun baru berhasil dibuat. Password default: '.User::DEFAULT_PASSWORD);
+        return back()->with('success', 'Akun baru berhasil dibuat. Password default: '.User::defaultPassword());
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -74,9 +74,9 @@ class UserManagementController extends Controller
     {
         $this->authorize('resetPassword', $user);
 
-        $user->update(['password' => Hash::make(User::DEFAULT_PASSWORD)]);
+        $user->update(['password' => Hash::make(User::defaultPassword())]);
 
-        return back()->with('success', "Password {$user->name} sudah direset ke default (".User::DEFAULT_PASSWORD.').');
+        return back()->with('success', "Password {$user->name} sudah direset ke default (".User::defaultPassword().').');
     }
 
     public function toggleActive(User $user): RedirectResponse

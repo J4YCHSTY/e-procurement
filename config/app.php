@@ -123,4 +123,19 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default Password Akun Baru
+    |--------------------------------------------------------------------------
+    |
+    | Password default yang dipakai buat akun baru (dibuat lewat User
+    | Management) dan buat reset password. Sengaja dibaca dari .env, BUKAN
+    | di-hardcode di kode, biar nggak ke-push ke repository publik/private
+    | dan gampang diganti tanpa perlu ubah kode. Wajib diisi di file .env
+    | lokal masing-masing (lihat DEFAULT_USER_PASSWORD di .env.example).
+    |
+    */
+
+    'default_user_password' => env('DEFAULT_USER_PASSWORD'),
+
 ];
