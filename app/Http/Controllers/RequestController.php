@@ -37,9 +37,10 @@ class RequestController extends Controller
         $validateData = $request->validate([
             'request_date' => 'required|date',
             'software_name' => 'required|string|max:255',
-            'software_type' => 'nullable|string|max:255',
+            'software_type' => 'required|string|max:255',
+            'software_usage' => 'required|in:individu,team',
             'license_count' => 'required|integer|min:1',
-            'duration_months' => 'required|integer|min:1',
+            'duration_months' => 'nullable|integer|min:1|required_unless:software_type,License',
             'estimated_cost' => 'required|numeric|min:0',
             'justification' => 'required|string',
             'digital_signature' => 'required|boolean'
@@ -50,6 +51,7 @@ class RequestController extends Controller
         $softwareRequest->request_date = $validateData['request_date'];
         $softwareRequest->software_name = $validateData['software_name'];
         $softwareRequest->software_type = $validateData['software_type'];
+        $softwareRequest->software_usage = $validateData['software_usage'];
         $softwareRequest->license_count = $validateData['license_count'];
         $softwareRequest->duration_months = $validateData['duration_months'];
         $softwareRequest->estimated_cost = $validateData['estimated_cost'];

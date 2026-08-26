@@ -20,6 +20,14 @@ class User extends Authenticatable
     protected $table = 'master_employees';
 
     /**
+     * Password default buat akun baru (dibuat IT lewat User Management)
+     * atau buat reset password (baik lewat User Management maupun command
+     * `users:reset-default-password`). User diarahkan ganti sendiri lewat
+     * halaman Profil setelah login pertama kali.
+     */
+    public const DEFAULT_PASSWORD = '@visinema2026';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -32,6 +40,7 @@ class User extends Authenticatable
         'position',
         'departement_id',
         'role',
+        'is_active',
     ];
 
     /**
@@ -54,6 +63,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 

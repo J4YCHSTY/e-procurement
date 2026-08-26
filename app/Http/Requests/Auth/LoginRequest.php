@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -41,6 +42,20 @@ class LoginRequest extends FormRequest
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
+
+        // Dicek terpisah dari Auth::attempt() supaya user yang akunnya
+        // dinonaktifkan IT dapet pesan yang jelas ("hubungi admin IT"),
+        // bukan pesan generik "email/password salah" yang bikin bingung
+        // (dikira mereka salah ketik password).
+        $user = User::where('email', $this->string('email'))->first();
+
+        if ($user && ! $user->is_active) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun kamu sudah dinonaktifkan. Silakan hubungi admin IT.',
+            ]);
+        }
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());

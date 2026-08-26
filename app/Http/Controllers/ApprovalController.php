@@ -51,6 +51,13 @@ class ApprovalController extends Controller
     {
         $this->authorize('reject', $request);
 
+        // Snapshot tahap approval tempat dia ditolak SEBELUM status ditimpa
+        // jadi REJECTED - dipakai buat riwayat approval per role (lihat
+        // DashboardController::approvalHistoryFor()) biar bisa dibedain
+        // "ditolak sama Head" vs "ditolak sama IT" vs "ditolak sama Finance".
+        $request->rejected_at_stage = $request->status;
+        $request->rejected_by_id = auth()->id();
+        $request->rejected_at = now();
         $request->status = RequestStatus::Rejected->value;
         $request->save();
 

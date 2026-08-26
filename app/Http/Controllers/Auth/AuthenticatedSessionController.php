@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Models\User;
 use App\Http\Controllers\Controller;
-// use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,25 +26,18 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Handle an incoming authentication request.
+     *
+     * Dulu di sini ada "simulasi SSO" (cukup cek email terdaftar, password
+     * nggak pernah dicek). Sekarang dikembalikan ke alur standar Laravel:
+     * LoginRequest::authenticate() yang beneran manggil Auth::attempt()
+     * (plus rate-limiting bawaan biar nggak bisa di-brute-force). Ini perlu
+     * supaya fitur ganti password sendiri (Profile) dan reset password lewat
+     * email jadi ada gunanya - sebelum ini, ganti password nggak ngaruh
+     * apa-apa ke proses login.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(LoginRequest $request): RedirectResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
-
-        // Simulasi SSO: cukup cek apakah email ini terdaftar sebagai karyawan.
-        // Karena master_employees SEKARANG adalah tabel auth itu sendiri (bukan
-        // tabel terpisah lagi), nggak perlu proses sync/updateOrCreate ke tabel lain.
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user) {
-            return back()->withErrors([
-                'email' => 'EMAIL TIDAK TERDAFTAR PADA DATABASE',
-            ]);
-        }
-
-        Auth::login($user);
+        $request->authenticate();
 
         $request->session()->regenerate();
 

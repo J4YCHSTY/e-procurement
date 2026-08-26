@@ -14,10 +14,26 @@ class HardwareRequest extends Model
         'justification',
         'digital_signature',
         'status',
+        'rejected_by_id',
+        'rejected_at',
+        'rejected_at_stage',
+    ];
+
+    protected $casts = [
+        'rejected_at' => 'datetime',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * User yang nolak pengajuan ini (kalau statusnya REJECTED). Dipakai buat
+     * nampilin siapa yang nolak di tab Riwayat Approval.
+     */
+    public function rejectedBy()
+    {
+        return $this->belongsTo(User::class, 'rejected_by_id');
     }
 }

@@ -4,17 +4,11 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RequestController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\DashboardController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect()->route(auth()->check() ? 'dashboard' : 'login');
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -32,6 +26,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/request/hardware/{hardwareRequest}/reject', [ApprovalController::class, 'rejectHardware'])->name('request.hardware.reject');
     Route::post('/request/software/{softwareRequest}/approve', [ApprovalController::class, 'approveSoftware'])->name('request.software.approve');
     Route::post('/request/software/{softwareRequest}/reject', [ApprovalController::class, 'rejectSoftware'])->name('request.software.reject');
+
+    // User Management - otorisasinya dicek per-method lewat UserPolicy,
+    // bukan di sini, biar konsisten sama pola approval (lihat ApprovalController).
+    Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+    Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
+    Route::patch('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+    Route::post('/users/{user}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.reset-password');
+    Route::post('/users/{user}/toggle-active', [UserManagementController::class, 'toggleActive'])->name('users.toggle-active');
 });
 
 require __DIR__.'/auth.php';

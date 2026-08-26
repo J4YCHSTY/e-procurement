@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Models\HardwareRequest;
 use App\Models\SoftwareRequest;
+use App\Models\User;
 use App\Policies\RequestPolicy;
+use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -32,5 +34,6 @@ class AppServiceProvider extends ServiceProvider
         // jadi harus didaftarin manual di sini.
         Gate::policy(HardwareRequest::class, RequestPolicy::class);
         Gate::policy(SoftwareRequest::class, RequestPolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
     }
 }

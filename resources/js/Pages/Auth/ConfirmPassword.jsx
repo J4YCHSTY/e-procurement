@@ -22,13 +22,16 @@ export default function ConfirmPassword() {
         <GuestLayout>
             <Head title="Confirm Password" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                This is a secure area of the application. Please confirm your
-                password before continuing.
+            <div className="mb-6">
+                <h2 className="text-lg font-semibold text-slate-900">Konfirmasi Password</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                    Ini adalah area aman aplikasi. Mohon konfirmasi password
+                    kamu sebelum melanjutkan.
+                </p>
             </div>
 
-            <form onSubmit={submit}>
-                <div className="mt-4">
+            <form onSubmit={submit} className="space-y-4">
+                <div>
                     <InputLabel htmlFor="password" value="Password" />
 
                     <TextInput
@@ -44,9 +47,9 @@ export default function ConfirmPassword() {
                     <InputError message={errors.password} className="mt-2" />
                 </div>
 
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Confirm
+                <div className="flex items-center justify-end pt-2">
+                    <PrimaryButton className="w-full justify-center" disabled={processing}>
+                        {processing ? 'Memproses...' : 'Confirm'}
                     </PrimaryButton>
                 </div>
             </form>

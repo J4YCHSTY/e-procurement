@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm } from '@inertiajs/react';
 
 const HardwareForm = () => {
@@ -31,66 +30,69 @@ const HardwareForm = () => {
         post(route('request.hardware.store'))
     }
 
+    const inputClass = "block w-full rounded-lg border-slate-300 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:ring-brand-500";
+    const labelClass = "mb-2 block text-sm font-medium text-slate-700";
 
     return (
-        <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 border-gray-600 mt-6 animate-fade-in-up">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">FORM PENGAJUAN HARDWARE</h3>
-            <form className="space-y-4" onSubmit={submitHardware}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="pb-4">
-                        <label className="block font-medium text-sm text-gray-700 mb-2">TANGGAL PERMINTAAN <span className="text-red-500">*</span></label>
-                        <input type="date" className="border-gray-300 bg-gray-50 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full" value={data.request_date} onChange={(e) => setData('request_date', e.target.value)} required/>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+            <h3 className="mb-1 text-base font-semibold text-slate-900">Form Pengajuan Hardware</h3>
+            <p className="mb-6 text-sm text-slate-500">Lengkapi detail perangkat yang kamu butuhkan.</p>
+            <form className="space-y-5" onSubmit={submitHardware}>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div>
+                        <label className={labelClass}>Tanggal Permintaan <span className="text-rose-500">*</span></label>
+                        <input type="date" className={inputClass} value={data.request_date} onChange={(e) => setData('request_date', e.target.value)} required/>
                     </div>
-                    <div className="pb-4">
-                        <label className="block font-medium text-sm mb-2">
-                            Pilih Jenis Perangkat Yang Dibutuhkan <span className="text-red-600">*</span>
+                    <div>
+                        <label className={labelClass}>
+                            Pilih Jenis Perangkat Yang Dibutuhkan <span className="text-rose-500">*</span>
                         </label>
-                        <select className="border-gray-600 focus:border-grey-500 focus:ring-grey-300 rounded-md shadow-sm w-full" value={data.hardware_type} onChange = {(e) => {setData('hardware_type', e.target.value); setData('hardware_recommendation', '')}} required>
+                        <select className={inputClass} value={data.hardware_type} onChange = {(e) => {setData('hardware_type', e.target.value); setData('hardware_recommendation', '')}} required>
                             <option value="">-- Pilih Jenis Perangkat --</option>
                             <option value="laptop">Laptop</option>
                             <option value="pc_desktop">Desktop</option>
-                            <option value="peripherals">peripherals (Headphone, Mouse, Keyboard)</option>
+                            <option value="peripherals">Peripherals (Headphone, Mouse, Keyboard)</option>
                             <option value="gadget">Gadget</option>
                             <option value="Lainnya">Lainnya</option>
                         </select>
                     </div>
                 </div>
                 {currentRecommendations.length > 0 && (
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-md mt-4 transition-all duration-300">
-                        <label className="block font-medium text-sm text-black-800 mb-1">
-                            Rekomendasi Perangkat Standar Perusahaan <span className="text-red-500">*</span>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                            Rekomendasi Perangkat Standar Perusahaan <span className="text-rose-500">*</span>
                         </label>
-                        <p className="text-xs text-black-600 mb-3">
+                        <p className="mb-3 text-xs text-slate-500">
                             Memilih spesifikasi dari standar perusahaan akan mempercepat proses persetujuan pengajuan Anda.
                         </p>
-                        <select className="border-gray-300 focus:border-gray-500 rounded-md shadow-sm w-full" value={data.hardware_recommendation} onChange={(e) => setData('hardware_recommendation', e.target.value)} required>
+                        <select className={inputClass} value={data.hardware_recommendation} onChange={(e) => setData('hardware_recommendation', e.target.value)} required>
                             <option value="">-- Pilih Spesifikasi Standar IT --</option>
                             {currentRecommendations.map((device) => (
                                 <option key={device.id} value={device.id}>
                                     {device.name}
                                 </option>
                             ))}
-                            <option value="custom" className="font-semibold text-gray-500 italic">
+                            <option value="custom" className="font-semibold italic text-slate-500">
                                 Ajukan Perangkat Lain (Di luar standar)
                             </option>
                         </select>
                     </div>
                 )}
                 <div>
-                    <label className="block font-medium text-sm text-gray-600 mb-4">
-                        Alasan Pengajuan & Jelaskan Spesifikasi Khusus (Jika Ada) <span className="text-red-500">*</span>
+                    <label className={labelClass}>
+                        Alasan Pengajuan &amp; Jelaskan Spesifikasi Khusus (Jika Ada) <span className="text-rose-500">*</span>
                     </label>
-                    <textarea className="border-gray-400 focus:border-gray-500 focus:ring-gray-700 rounded-md shadow-md w-full" rows="4" placeholder="Masukan alasan pengajuan dan spesifikasi khusus (jika diperlukan)" value={data.justification} onChange={(e) => setData("justification", e.target.value)} required></textarea>
+                    <textarea className={inputClass} rows="4" placeholder="Masukan alasan pengajuan dan spesifikasi khusus (jika diperlukan)" value={data.justification} onChange={(e) => setData("justification", e.target.value)} required></textarea>
                 </div>
-                <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md flex items-start gap-3">
-                    <input id="digital-signature" type="checkbox" className="w-4 h-4 text-gray-600 bg-gray-100 border-gray-400 rounded focus:ring-gray-500" checked={data.digital_signature} onChange={(e) => setData("digital_signature", e.target.checked)}/>
-                    <label htmlFor="signature-hardaware" className="font-medium text-gray-900 cursor-pointer">
+                <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <input id="digital-signature" type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" checked={data.digital_signature} onChange={(e) => setData("digital_signature", e.target.checked)}/>
+                    <label htmlFor="digital-signature" className="cursor-pointer text-sm font-medium text-slate-700">
                         Dengan mencentang ini, saya menyatakan bahwa informasi yang saya berikan sudah benar!
                     </label>
-                    {errors.digital_signature && <p className="text-red-500 text-sm mt-1">{errors.digital_signature}</p>}
+                    {errors.digital_signature && <p className="mt-1 text-sm text-rose-600">{errors.digital_signature}</p>}
                 </div>
-                <div className="flex justify-end pt-4 border-t mt-6">
-                    <button type="submit" disabled={!data.digital_signature || processing} className={`p-4 font-bold rounded-md transition duration-150 ease-in-out shadow-md ${data.digital_signature && !processing ? 'bg-black text-white hover:bg-gray-800 cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}> {processing ? "Submitting..." : "Create Form & Send"}</button>
+                <div className="flex justify-end border-t border-slate-100 pt-5">
+                    <button type="submit" disabled={!data.digital_signature || processing} className={`rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm transition duration-150 ease-in-out ${data.digital_signature && !processing ? 'bg-brand-600 text-white hover:bg-brand-700 cursor-pointer' : 'cursor-not-allowed bg-slate-200 text-slate-400'}`}> {processing ? "Mengirim..." : "Kirim Pengajuan"}</button>
                 </div>
             </form>
         </div>
