@@ -34,7 +34,7 @@ const HardwareForm = () => {
     const labelClass = "mb-2 block text-sm font-medium text-slate-700";
 
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+        <div className="border-t border-slate-100 pt-6">
             <h3 className="mb-1 text-base font-semibold text-slate-900">Form Pengajuan Hardware</h3>
             <p className="mb-6 text-sm text-slate-500">Lengkapi detail perangkat yang kamu butuhkan.</p>
             <form className="space-y-5" onSubmit={submitHardware}>

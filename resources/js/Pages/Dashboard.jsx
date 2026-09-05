@@ -173,37 +173,40 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Tab navigasi */}
-                <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-px">
-                    {TABS.filter((tab) => !tab.approverOnly || canApprove).map((tab) => {
-                        const Icon = tab.icon;
-                        const active = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`relative flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-semibold transition ${
-                                    active
-                                        ? "border-b-2 border-brand-600 text-brand-700"
-                                        : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
-                                }`}
-                            >
-                                <Icon className="h-4 w-4" />
-                                {tab.label}
-                                {tab.id === "approval" && pendingCount > 0 && (
-                                    <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-xs font-bold text-white">
-                                        {pendingCount}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
+                {/* Tab navigasi + konten - dibungkus satu kartu putih biar tab yang aktif kelihatan nyambung ke area kontennya, tanpa card bersarang di dalam. Klik pill yang lagi aktif buat nonaktifin lagi (balik ke state awal, semua pill rounded penuh). */}
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+                    <div className={`flex gap-1.5 bg-slate-50 p-1.5 transition-all duration-300 ${activeTab ? "pb-0" : ""}`}>
+                        {TABS.filter((tab) => !tab.approverOnly || canApprove).map((tab) => {
+                            const Icon = tab.icon;
+                            const active = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(active ? null : tab.id)}
+                                    className={`relative flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-semibold transition-all duration-300 ${
+                                        active
+                                            ? "rounded-t-xl rounded-b-none bg-black text-white shadow-sm"
+                                            : "rounded-xl text-slate-600 hover:bg-white hover:text-slate-900"
+                                    }`}
+                                >
+                                    <Icon className="h-4 w-4" />
+                                    {tab.label}
+                                    {tab.id === "approval" && pendingCount > 0 && (
+                                        <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-xs font-bold text-white">
+                                            {pendingCount}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
 
+                    {activeTab && (
+                    <div>
                 {/* Buat Pengajuan */}
                 {activeTab === "create" && (
-                    <div className="space-y-6">
-                        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+                    <div className="space-y-6 p-6">
+                        <div>
                             <label className="mb-2 block text-sm font-semibold text-slate-700">
                                 Pilih Kategori Pengajuan
                             </label>
@@ -225,7 +228,7 @@ export default function Dashboard() {
 
                 {/* Riwayat Pengajuan */}
                 {activeTab === "history" && (
-                    <div className="rounded-xl border border-slate-200 bg-white shadow-card">
+                    <div>
                         <div className="border-b border-slate-100 p-6 pb-4">
                             <h3 className="text-base font-semibold text-slate-900">Riwayat Pengajuan</h3>
                         </div>
@@ -285,7 +288,7 @@ export default function Dashboard() {
 
                 {/* Approval */}
                 {activeTab === "approval" && canApprove && (
-                    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+                    <div className="p-6">
                         <h3 className="text-base font-semibold text-slate-900">Daftar Pengajuan Perlu Ditinjau</h3>
                         <p className="mb-6 mt-1 text-sm text-slate-500">
                             Setujui atau tolak pengajuan yang masuk ke tahap kamu.
@@ -352,7 +355,7 @@ export default function Dashboard() {
 
                 {/* Riwayat Approval */}
                 {activeTab === "approval_history" && canApprove && (
-                    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+                    <div className="p-6">
                         <h3 className="text-base font-semibold text-slate-900">Riwayat Approval</h3>
                         <p className="mb-6 mt-1 text-sm text-slate-500">
                             Pengajuan yang sudah pernah kamu proses di tahapmu, lengkap sama keputusannya.
@@ -405,6 +408,9 @@ export default function Dashboard() {
                         )}
                     </div>
                 )}
+                    </div>
+                    )}
+                </div>
             </div>
         </AuthenticatedLayout>
     );
