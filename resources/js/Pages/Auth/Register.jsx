@@ -26,8 +26,8 @@ export default function Register() {
             <Head title="Register" />
 
             <div className="mb-6">
-                <h2 className="text-lg font-semibold text-slate-900">Buat Akun Baru</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <h2 className="text-[16.5px] font-extrabold text-ink">Buat Akun Baru</h2>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
                     Lengkapi data di bawah untuk mendaftar.
                 </p>
             </div>

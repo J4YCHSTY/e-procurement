@@ -30,6 +30,10 @@ use Throwable;
  *   - Role / Role Approval   (opsional, default 'user' kalau kosong atau
  *     nilainya nggak dikenal - harus salah satu dari: user, head, it,
  *     finance, procurement)
+ *   - Bisa Akses Manajemen User (opsional, default tidak - isi dengan
+ *     ya/yes/true/1 kalau orang ini perlu buka menu Manajemen User.
+ *     Ini KOLOM TERPISAH dari Role - lihat catatan di UserPolicy kenapa
+ *     dipisah: role ngatur approval, kolom ini ngatur akses menu ini)
  *
  * Baris tanpa email yang valid otomatis dilewati (misal staff yang belum
  * punya email kantor).
@@ -57,7 +61,10 @@ class ImportEmployees extends Command
         'email' => ['email'],
         'department' => ['departemen sistem', 'departemen', 'department', 'dept'],
         'role' => ['role approval', 'role'],
+        'can_manage_users' => ['bisa akses manajemen user', 'bisa manage user', 'manage user', 'can manage users', 'user management'],
     ];
+
+    private const TRUE_VALUES = ['1', 'ya', 'yes', 'true', 'y', 'iya'];
 
     public function handle(): int
     {
@@ -124,9 +131,20 @@ class ImportEmployees extends Command
                 $name = $value('name');
                 $email = $this->cleanEmail($value('email'));
                 $position = $value('position') ?: null;
-                $entity = $value('entity') ?: null;
+                // Nama perusahaan disamakan dulu ke format resmi (User::ENTITIES)
+                // kalau bedanya cuma huruf besar/kecil, biar nilainya cocok sama
+                // pilihan dropdown di halaman Manajemen User. Kalau memang di
+                // luar daftar, datanya tetap dipakai apa adanya tapi dilaporin
+                // sebagai warning - lebih baik ketahuan daripada diam-diam
+                // bikin perusahaan "baru" yang nggak ada di dropdown.
+                $entity = User::normalizeEntity($value('entity'));
+
+                if ($entity !== null && ! array_key_exists($entity, User::ENTITIES)) {
+                    $warnings[] = "Baris {$rowNumber} ({$name}): perusahaan '{$entity}' di luar daftar resmi (VP / VKI / BDI).";
+                }
                 $departmentName = $value('department');
                 $role = strtolower($value('role')) ?: 'user';
+                $canManageUsers = in_array(strtolower($value('can_manage_users')), self::TRUE_VALUES, true);
 
                 if ($name === '' && $email === '') {
                     continue; // baris kosong total (spasi kosong di antara data), lewati diam-diam
@@ -162,6 +180,7 @@ class ImportEmployees extends Command
                     'entity' => $entity,
                     'departement_id' => $departementId,
                     'role' => $role,
+                    'can_manage_users' => $canManageUsers,
                 ];
 
                 $existing = User::where('email', $email)->first();

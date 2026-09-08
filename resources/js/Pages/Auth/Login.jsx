@@ -1,19 +1,30 @@
-import { useState } from "react";
-import Checkbox from "@/Components/Checkbox";
-import InputError from "@/Components/InputError";
-import Modal from "@/Components/Modal";
-import TextInput from "@/Components/TextInput";
-import { Head, useForm } from "@inertiajs/react";
+import ApplicationLogo from '@/Components/ApplicationLogo';
+import {
+    IconCheckCircle,
+    IconEye,
+    IconEyeOff,
+    IconLockClosed,
+    IconMail,
+} from '@/Components/Icons';
+import InputError from '@/Components/InputError';
+import Modal from '@/Components/Modal';
+import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
+import TextInput from '@/Components/TextInput';
+import ThemeToggle from '@/Components/ThemeToggle';
+import { Head, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 function ForgotPasswordModal({ show, onClose, status }) {
-    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
-        email: "",
-    });
+    const { data, setData, post, processing, errors, reset, clearErrors } =
+        useForm({
+            email: '',
+        });
 
     const submit = (e) => {
         e.preventDefault();
 
-        post(route("password.email"), {
+        post(route('password.email'), {
             preserveScroll: true,
             preserveState: true,
         });
@@ -27,50 +38,50 @@ function ForgotPasswordModal({ show, onClose, status }) {
 
     return (
         <Modal show={show} onClose={handleClose} maxWidth="md">
-            <form onSubmit={submit} className="p-8">
-                <h2 className="text-center text-2xl font-bold text-slate-900">Reset Password</h2>
-                <p className="mt-2 text-center text-sm text-slate-500">
-                    Masukkan alamat email kamu dan kami akan mengirimkan link untuk membuat password baru.
+            <form onSubmit={submit} className="p-7">
+                <h2 className="text-center text-[18px] font-extrabold text-ink">
+                    Reset Password
+                </h2>
+                <p className="mt-2 text-center text-[12.5px] leading-relaxed text-ink-muted">
+                    Masukkan alamat email kamu dan kami akan mengirimkan link
+                    untuk membuat password baru.
                 </p>
 
                 {status && (
-                    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+                    <div className="mt-4 flex items-center gap-2.5 rounded-[14px] bg-success-soft px-4 py-3 text-[12.5px] font-semibold text-success">
+                        <IconCheckCircle className="h-4 w-4 shrink-0" />
                         {status}
                     </div>
                 )}
 
-                <div className="mt-6">
-                    <label htmlFor="forgot-email" className="mb-1.5 block text-sm font-bold text-slate-700">
-                        Email Address
+                <div className="mt-5">
+                    <label htmlFor="forgot-email" className="form-label">
+                        Email Kantor
                     </label>
-                    <TextInput
-                        id="forgot-email"
-                        type="email"
-                        name="email"
-                        className="mt-1 block w-full"
-                        placeholder="Placeholder"
-                        value={data.email}
-                        isFocused={show}
-                        onChange={(e) => setData("email", e.target.value)}
-                    />
-                    <InputError message={errors.email} className="mt-2" />
+                    <div className="relative">
+                        <IconMail className="pointer-events-none absolute start-4 top-1/2 h-[17px] w-[17px] -translate-y-1/2 text-ink-faint" />
+                        <TextInput
+                            id="forgot-email"
+                            type="email"
+                            name="email"
+                            className="!ps-11"
+                            placeholder="nama@visinemapictures.com"
+                            value={data.email}
+                            isFocused={show}
+                            onChange={(e) => setData('email', e.target.value)}
+                        />
+                    </div>
+                    <InputError message={errors.email} />
                 </div>
 
-                <button
-                    type="submit"
-                    disabled={processing}
-                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {processing ? "Mengirim..." : "Submit"}
-                </button>
-
-                <button
-                    type="button"
-                    onClick={handleClose}
-                    className="mt-4 block w-full text-center text-sm font-medium text-brand-600 hover:text-brand-700"
-                >
-                    Back to Login
-                </button>
+                <div className="mt-6 flex flex-col gap-2.5">
+                    <PrimaryButton disabled={processing} className="w-full">
+                        {processing ? 'Mengirim...' : 'Kirim Link Reset'}
+                    </PrimaryButton>
+                    <SecondaryButton onClick={handleClose} className="w-full">
+                        Kembali ke Login
+                    </SecondaryButton>
+                </div>
             </form>
         </Modal>
     );
@@ -78,117 +89,176 @@ function ForgotPasswordModal({ show, onClose, status }) {
 
 export default function Login({ status, canResetPassword }) {
     const [showForgotPassword, setShowForgotPassword] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: "",
-        password: "",
+        email: '',
+        password: '',
         remember: false,
     });
 
     const submit = (e) => {
         e.preventDefault();
 
-        post(route("login"), {
-            onFinish: () => reset("password"),
+        post(route('login'), {
+            onFinish: () => reset('password'),
         });
     };
 
     return (
-        <div className="grid min-h-screen grid-cols-1 grid-rows-[auto_1fr] lg:grid-cols-2 lg:grid-rows-1">
+        <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-canvas px-5 py-12">
             <Head title="Log in" />
 
-            {/* Panel kiri - branding, full putih biar logo menonjol. Di mobile jadi section atas (compact), di desktop jadi kolom kiri penuh. */}
-            <div className="relative flex flex-col items-center justify-center bg-white px-8 py-10 lg:p-12">
-                <img
-                    src="/images/visinema-pictures.png"
-                    alt="Visinema Pictures"
-                    className="h-28 w-auto object-contain lg:h-40"
-                />
+            {/*
+                Latar "spotlight" - dua gradient radial lembut warna aksen.
+                Sengaja pointer-events-none biar gak ganggu klik form di atasnya.
+            */}
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,var(--color-accent-soft),transparent_70%)]"
+            />
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_40%_at_50%_100%,var(--color-canvas-deep),transparent_70%)]"
+            />
+
+            <div className="absolute end-5 top-5 z-10">
+                <ThemeToggle />
             </div>
 
-            {/* Panel kanan - form login */}
-            <div className="flex flex-col items-center justify-center bg-slate-950 px-6 py-12 sm:px-12">
-                <div className="w-full max-w-sm">
-                    <div className="mb-8 text-center">
-                        <h2 className="text-2xl font-bold text-white">Sign In</h2>
-                        <div className="mt-3 h-0.5 w-full bg-white" />
-                    </div>
+            <main className="relative w-full max-w-[420px]">
+                <div className="rounded-[26px] border border-line bg-surface px-7 py-9 shadow-card sm:px-10 sm:py-10">
+                    <ApplicationLogo className="mx-auto h-[52px] w-auto" />
 
                     {status && (
-                        <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+                        <div className="mt-7 flex items-center gap-2.5 rounded-[14px] bg-success-soft px-4 py-3 text-[12.5px] font-semibold text-success">
+                            <IconCheckCircle className="h-4 w-4 shrink-0" />
                             {status}
                         </div>
                     )}
 
-                    <form onSubmit={submit} className="space-y-5">
+                    <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
                         <div>
-                            <label htmlFor="email" className="mb-1.5 block text-sm font-bold text-white">
-                                Email Address
+                            <label htmlFor="email" className="form-label">
+                                Email Kantor
                             </label>
-                            <TextInput
-                                id="email"
-                                type="email"
-                                name="email"
-                                placeholder="Email Address"
-                                value={data.email}
-                                className="mt-1 block w-full"
-                                autoComplete="username"
-                                isFocused={true}
-                                onChange={(e) => setData("email", e.target.value)}
-                            />
-                            <InputError message={errors.email} className="mt-2" />
+                            <div className="relative">
+                                <IconMail className="pointer-events-none absolute start-4 top-1/2 h-[17px] w-[17px] -translate-y-1/2 text-ink-faint" />
+                                <TextInput
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    placeholder="nama@visinemapictures.com"
+                                    value={data.email}
+                                    className="!ps-11 py-3"
+                                    autoComplete="username"
+                                    isFocused={true}
+                                    onChange={(e) =>
+                                        setData('email', e.target.value)
+                                    }
+                                />
+                            </div>
+                            <InputError message={errors.email} />
                         </div>
 
                         <div>
-                            <label htmlFor="password" className="mb-1.5 block text-sm font-bold text-white">
+                            <label htmlFor="password" className="form-label">
                                 Password
                             </label>
-                            <TextInput
-                                id="password"
-                                type="password"
-                                name="password"
-                                placeholder="Password"
-                                value={data.password}
-                                className="mt-1 block w-full"
-                                autoComplete="current-password"
-                                onChange={(e) => setData("password", e.target.value)}
-                            />
-                            <InputError message={errors.password} className="mt-2" />
+                            <div className="relative">
+                                <IconLockClosed className="pointer-events-none absolute start-4 top-1/2 h-[17px] w-[17px] -translate-y-1/2 text-ink-faint" />
+                                <TextInput
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    placeholder="Masukkan password kamu"
+                                    value={data.password}
+                                    className="!ps-11 !pe-12 py-3"
+                                    autoComplete="current-password"
+                                    onChange={(e) =>
+                                        setData('password', e.target.value)
+                                    }
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setShowPassword((prev) => !prev)
+                                    }
+                                    aria-label={
+                                        showPassword
+                                            ? 'Sembunyikan password'
+                                            : 'Tampilkan password'
+                                    }
+                                    className="absolute end-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-ink-faint transition hover:text-ink"
+                                >
+                                    {showPassword ? (
+                                        <IconEyeOff className="h-[17px] w-[17px]" />
+                                    ) : (
+                                        <IconEye className="h-[17px] w-[17px]" />
+                                    )}
+                                </button>
+                            </div>
+                            <InputError message={errors.password} />
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-2">
-                                <Checkbox
-                                    name="remember"
-                                    checked={data.remember}
-                                    onChange={(e) => setData("remember", e.target.checked)}
-                                />
-                                <span className="text-sm text-slate-300">Remember Me</span>
+                        <div className="flex items-center justify-between gap-3 pt-1">
+                            <label className="flex cursor-pointer items-center gap-2.5">
+                                {/*
+                                    Switch custom (bukan <input type=checkbox>)
+                                    biar bentuknya senada sama desain kartu ini.
+                                    Tetap dibungkus <label> + role="switch" supaya
+                                    masih kebaca screen reader & bisa diklik dari
+                                    teksnya.
+                                */}
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={data.remember}
+                                    onClick={() =>
+                                        setData('remember', !data.remember)
+                                    }
+                                    className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition focus:outline-none focus:ring-4 focus:ring-accent-soft ${
+                                        data.remember ? 'bg-accent' : 'bg-line'
+                                    }`}
+                                >
+                                    <span
+                                        className={`absolute top-[3px] h-4 w-4 rounded-full bg-white shadow-sm transition-all ${
+                                            data.remember
+                                                ? 'left-[19px]'
+                                                : 'left-[3px]'
+                                        }`}
+                                    />
+                                </button>
+                                <span className="text-[12.5px] font-semibold text-ink-muted">
+                                    Ingat saya
+                                </span>
                             </label>
 
                             {canResetPassword && (
                                 <button
                                     type="button"
                                     onClick={() => setShowForgotPassword(true)}
-                                    className="text-sm font-medium text-brand-400 hover:text-brand-300"
+                                    className="text-[12.5px] font-semibold text-accent-deep underline decoration-transparent underline-offset-2 transition hover:decoration-current"
                                 >
-                                    Forgot password
+                                    Lupa password?
                                 </button>
                             )}
                         </div>
 
-                        <div className="pt-2">
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {processing ? "Memproses..." : "Sign In"}
-                            </button>
-                        </div>
+                        <PrimaryButton
+                            disabled={processing}
+                            className="mt-2 w-full py-3"
+                        >
+                            {processing ? 'Memproses...' : 'Masuk'}
+                        </PrimaryButton>
                     </form>
                 </div>
-            </div>
+
+                <p className="mt-6 text-center text-[11.5px] text-ink-faint">
+                    &copy; {new Date().getFullYear()}{' '}
+                    <strong className="font-semibold">Visinema Pictures</strong>
+                </p>
+            </main>
 
             <ForgotPasswordModal
                 show={showForgotPassword}

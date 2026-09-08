@@ -1,3 +1,4 @@
+import { IconMail, IconUser } from '@/Components/Icons';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -24,79 +25,93 @@ export default function UpdateProfileInformation({
         patch(route('profile.update'));
     };
 
+    const needsVerification =
+        mustVerifyEmail && user.email_verified_at === null;
+
     return (
         <section className={className}>
-            <header>
-                <h2 className="text-base font-semibold text-slate-900">
-                    Informasi Profil
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                    Perbarui informasi profil dan alamat email akun kamu.
-                </p>
+            <header className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-accent-soft text-accent-deep">
+                    <IconUser className="h-4 w-4" />
+                </span>
+                <div>
+                    <h2 className="text-[15.5px] font-extrabold text-ink">
+                        Informasi Profil
+                    </h2>
+                    <p className="mt-0.5 text-[12.5px] text-ink-muted">
+                        Perbarui nama dan alamat email akun kamu.
+                    </p>
+                </div>
             </header>
 
-            <form onSubmit={submit} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
+            <form onSubmit={submit} className="mt-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <InputLabel htmlFor="name" value="Nama" />
+                        <TextInput
+                            id="name"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            required
+                            isFocused
+                            autoComplete="name"
+                        />
+                        <InputError message={errors.name} />
+                    </div>
 
-                    <TextInput
-                        id="name"
-                        className="mt-1 block w-full"
-                        value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                        isFocused
-                        autoComplete="name"
-                    />
-
-                    <InputError className="mt-2" message={errors.name} />
+                    <div>
+                        <InputLabel htmlFor="email" value="Email" />
+                        <TextInput
+                            id="email"
+                            type="email"
+                            value={data.email}
+                            onChange={(e) => setData('email', e.target.value)}
+                            required
+                            autoComplete="username"
+                        />
+                        <InputError message={errors.email} />
+                    </div>
                 </div>
 
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
-                        id="email"
-                        type="email"
-                        className="mt-1 block w-full"
-                        value={data.email}
-                        onChange={(e) => setData('email', e.target.value)}
-                        required
-                        autoComplete="username"
-                    />
-
-                    <InputError className="mt-2" message={errors.email} />
-                </div>
-
-                {mustVerifyEmail && user.email_verified_at === null && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                        <p className="text-sm text-amber-800">
-                            Your email address is unverified.{' '}
+                {needsVerification ? (
+                    <div className="mt-4 flex gap-3 rounded-[14px] bg-warning-soft px-4 py-3.5 text-[12.5px] leading-relaxed text-warning">
+                        <IconMail className="mt-px h-[17px] w-[17px] shrink-0" />
+                        <div>
+                            <strong className="mb-0.5 block text-[13px]">
+                                Email kamu belum terverifikasi
+                            </strong>
                             <Link
                                 href={route('verification.send')}
                                 method="post"
                                 as="button"
-                                className="font-medium text-amber-900 underline hover:text-amber-950"
+                                className="font-semibold underline underline-offset-2"
                             >
-                                Click here to re-send the verification email.
+                                Klik di sini buat kirim ulang email verifikasi.
                             </Link>
-                        </p>
-
-                        {status === 'verification-link-sent' && (
-                            <div className="mt-2 text-sm font-medium text-emerald-700">
-                                A new verification link has been sent to your
-                                email address.
-                            </div>
-                        )}
+                            {status === 'verification-link-sent' && (
+                                <div className="mt-1.5 font-semibold text-success">
+                                    Link verifikasi baru sudah dikirim ke email
+                                    kamu.
+                                </div>
+                            )}
+                        </div>
                     </div>
+                ) : (
+                    user.email_verified_at && (
+                        <div className="mt-4 flex gap-3 rounded-[14px] bg-accent-soft px-4 py-3.5 text-[12.5px] leading-relaxed text-accent-deep">
+                            <IconMail className="mt-px h-[17px] w-[17px] shrink-0" />
+                            <div>
+                                <strong className="mb-0.5 block text-[13px]">
+                                    Email sudah terverifikasi
+                                </strong>
+                                Notifikasi terkait status pengajuan kamu dikirim
+                                ke alamat ini.
+                            </div>
+                        </div>
+                    )
                 )}
 
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>
-                        {processing ? 'Menyimpan...' : 'Save'}
-                    </PrimaryButton>
-
+                <div className="mt-5 flex items-center justify-end gap-3 border-t border-line pt-[18px]">
                     <Transition
                         show={recentlySuccessful}
                         enter="transition ease-in-out"
@@ -104,8 +119,14 @@ export default function UpdateProfileInformation({
                         leave="transition ease-in-out"
                         leaveTo="opacity-0"
                     >
-                        <p className="text-sm text-slate-500">Saved.</p>
+                        <p className="text-[12.5px] font-semibold text-success">
+                            Tersimpan.
+                        </p>
                     </Transition>
+
+                    <PrimaryButton disabled={processing}>
+                        {processing ? 'Menyimpan...' : 'Simpan Perubahan'}
+                    </PrimaryButton>
                 </div>
             </form>
         </section>

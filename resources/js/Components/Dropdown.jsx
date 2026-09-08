@@ -38,7 +38,7 @@ const Trigger = ({ children }) => {
 const Content = ({
     align = 'right',
     width = '48',
-    contentClasses = 'py-1 bg-white',
+    contentClasses = 'py-1.5 bg-surface',
     children,
 }) => {
     const { open, setOpen } = useContext(DropDownContext);
@@ -69,12 +69,12 @@ const Content = ({
                 leaveTo="opacity-0 scale-95"
             >
                 <div
-                    className={`absolute z-50 mt-2 rounded-lg shadow-lg ${alignmentClasses} ${widthClasses}`}
+                    className={`absolute z-50 mt-2 rounded-xl shadow-card ${alignmentClasses} ${widthClasses}`}
                     onClick={() => setOpen(false)}
                 >
                     <div
                         className={
-                            `rounded-lg ring-1 ring-slate-900/5 ` +
+                            `overflow-hidden rounded-xl border border-line ` +
                             contentClasses
                         }
                     >
@@ -91,7 +91,7 @@ const DropdownLink = ({ className = '', children, ...props }) => {
         <Link
             {...props}
             className={
-                'block w-full px-4 py-2 text-start text-sm leading-5 text-slate-700 transition duration-150 ease-in-out hover:bg-slate-100 focus:bg-slate-100 focus:outline-none ' +
+                'block w-full px-4 py-2 text-start text-[13px] font-medium leading-5 text-ink-muted transition duration-150 ease-in-out hover:bg-surface-sunken hover:text-ink focus:bg-surface-sunken focus:outline-none ' +
                 className
             }
         >

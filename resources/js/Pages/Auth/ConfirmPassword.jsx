@@ -23,8 +23,8 @@ export default function ConfirmPassword() {
             <Head title="Confirm Password" />
 
             <div className="mb-6">
-                <h2 className="text-lg font-semibold text-slate-900">Konfirmasi Password</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <h2 className="text-[16.5px] font-extrabold text-ink">Konfirmasi Password</h2>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
                     Ini adalah area aman aplikasi. Mohon konfirmasi password
                     kamu sebelum melanjutkan.
                 </p>

@@ -2,9 +2,179 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * =========================================================================
+ * TOKEN WARNA
+ * =========================================================================
+ * Semua warna aplikasi didefinisikan sekali di sini sebagai CSS variable,
+ * bukan di-hardcode per komponen. Alasannya: satu set token yang sama dipakai
+ * buat tema terang DAN gelap. Jadi komponen cukup nulis `bg-surface text-ink`
+ * sekali - waktu temanya ganti, yang berubah nilai variabelnya, bukan
+ * class-nya. Nama token dipetakan ke Tailwind di tailwind.config.js.
+ *
+ * Ada 3 kondisi tema yang harus dihandle, urutannya penting:
+ *   1. :root                       -> tema terang, ini default-nya
+ *   2. prefers-color-scheme: dark  -> user belum milih apa-apa, ikut setting OS
+ *   3. :root[data-theme="dark"]    -> user klik tombol toggle, ini yang menang
+ *
+ * Nomor 2 sengaja dikunci pakai :not([data-theme='light']) supaya kalau user
+ * eksplisit milih tema terang padahal OS-nya gelap, pilihan user tetap dipakai.
+ */
 @layer base {
+    :root {
+        color-scheme: light;
+
+        /* Permukaan */
+        --color-canvas: #f2f8f9;
+        --color-canvas-deep: #e4f0f1;
+        --color-surface: #ffffff;
+        --color-surface-sunken: #f7fafb;
+        --color-surface-glass: rgba(255, 255, 255, 0.88);
+        --color-line: #dce8ea;
+        --color-overlay: rgba(6, 20, 23, 0.5);
+
+        /* Teks */
+        --color-ink: #0c2226;
+        --color-ink-muted: #5e7a80;
+        --color-ink-faint: #93aeb3;
+
+        /* Aksen brand (#009BB6 - warna biru/teal logo Visinema Pictures) */
+        --color-accent: #009bb6;
+        --color-accent-deep: #026e80;
+        --color-accent-strong: #026e80;
+        --color-accent-soft: #d8eef1;
+
+        /* Warna teks di ATAS permukaan warna terang (tombol utama, tab aktif,
+           badge). Di tema gelap aksen & warna semantiknya jauh lebih terang,
+           jadi teks putih di atasnya cuma dapat rasio kontras ~2:1 alias susah
+           dibaca - di sana teksnya dibalik jadi gelap (~8:1). */
+        --color-on-bright: #ffffff;
+
+        /* Warna semantik - sengaja beda hue dari aksen biar status kebaca */
+        --color-warning: #9a6700;
+        --color-warning-soft: #fef3d6;
+        --color-success: #0e7d4b;
+        --color-success-soft: #dcf5e7;
+        --color-danger: #b3341f;
+        --color-danger-soft: #fbe4df;
+
+        /* Penanda kategori (Hardware / Software, role user) */
+        --color-tag-blue: #2563eb;
+        --color-tag-blue-soft: #dbe8ff;
+        --color-tag-violet: #7c3aed;
+        --color-tag-violet-soft: #ece1ff;
+
+        /* Bayangan - tema gelap butuh yang lebih pekat, makanya ikut token */
+        --shadow-card: 0 1px 2px rgba(9, 35, 41, 0.04),
+            0 20px 40px -20px rgba(9, 45, 51, 0.16);
+        --shadow-pop: 0 10px 24px -10px rgba(9, 45, 51, 0.22);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+            color-scheme: dark;
+
+            --color-canvas: #071417;
+            --color-canvas-deep: #0a1c20;
+            --color-surface: #0e2226;
+            --color-surface-sunken: #0a1b1e;
+            --color-surface-glass: rgba(14, 34, 38, 0.88);
+            --color-line: #1b3438;
+            --color-overlay: rgba(0, 0, 0, 0.65);
+
+            --color-ink: #eaf5f6;
+            --color-ink-muted: #85a6ac;
+            --color-ink-faint: #4d6c72;
+
+            --color-accent: #2bc4e0;
+            --color-accent-deep: #7fe0ef;
+            --color-accent-strong: #0f8fa6;
+            --color-accent-soft: #123138;
+            --color-on-bright: #04212a;
+
+            --color-warning: #f2b84b;
+            --color-warning-soft: #3a2a0c;
+            --color-success: #4ade93;
+            --color-success-soft: #0f2a1c;
+            --color-danger: #f0806a;
+            --color-danger-soft: #3a1712;
+
+            --color-tag-blue: #7aa9ff;
+            --color-tag-blue-soft: #14243f;
+            --color-tag-violet: #b79bff;
+            --color-tag-violet-soft: #241a3d;
+
+            --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3),
+                0 20px 40px -20px rgba(0, 0, 0, 0.55);
+            --shadow-pop: 0 10px 24px -10px rgba(0, 0, 0, 0.5);
+        }
+    }
+
+    :root[data-theme='dark'] {
+        color-scheme: dark;
+
+        --color-canvas: #071417;
+        --color-canvas-deep: #0a1c20;
+        --color-surface: #0e2226;
+        --color-surface-sunken: #0a1b1e;
+        --color-surface-glass: rgba(14, 34, 38, 0.88);
+        --color-line: #1b3438;
+        --color-overlay: rgba(0, 0, 0, 0.65);
+
+        --color-ink: #eaf5f6;
+        --color-ink-muted: #85a6ac;
+        --color-ink-faint: #4d6c72;
+
+        --color-accent: #2bc4e0;
+        --color-accent-deep: #7fe0ef;
+        --color-accent-strong: #0f8fa6;
+        --color-accent-soft: #123138;
+        --color-on-bright: #04212a;
+
+        --color-warning: #f2b84b;
+        --color-warning-soft: #3a2a0c;
+        --color-success: #4ade93;
+        --color-success-soft: #0f2a1c;
+        --color-danger: #f0806a;
+        --color-danger-soft: #3a1712;
+
+        --color-tag-blue: #7aa9ff;
+        --color-tag-blue-soft: #14243f;
+        --color-tag-violet: #b79bff;
+        --color-tag-violet-soft: #241a3d;
+
+        --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3),
+            0 20px 40px -20px rgba(0, 0, 0, 0.55);
+        --shadow-pop: 0 10px 24px -10px rgba(0, 0, 0, 0.5);
+    }
+
     ::selection {
-        @apply bg-brand-200 text-brand-900;
+        @apply bg-accent-soft text-accent-deep;
+    }
+
+    body {
+        /* Angka di tabel & kartu statistik pakai lebar digit seragam biar
+           kolomnya rata dan gak "goyang" pas nilainya berubah. */
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@layer components {
+    /*
+     * Satu class buat semua input/select/textarea di aplikasi. Ditaruh di CSS
+     * (bukan diulang-ulang di tiap JSX) karena dipakai di banyak file: form
+     * pengajuan hardware/software, modal manajemen user, halaman profil, login.
+     */
+    .form-field {
+        @apply block w-full rounded-xl border-[1.5px] border-line bg-canvas px-3.5 py-2.5 text-sm text-ink shadow-none transition placeholder:text-ink-faint focus:border-accent focus:bg-surface focus:outline-none focus:ring-4 focus:ring-accent-soft;
+    }
+
+    .form-field:disabled {
+        @apply cursor-not-allowed bg-surface-sunken text-ink-faint;
+    }
+
+    .form-label {
+        @apply mb-1.5 block text-[12.5px] font-bold text-ink;
     }
 }
 

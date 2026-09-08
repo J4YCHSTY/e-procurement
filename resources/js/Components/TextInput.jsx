@@ -16,14 +16,13 @@ export default forwardRef(function TextInput(
         }
     }, [isFocused]);
 
+    // `form-field` didefinisikan di resources/css/app.css - satu style input
+    // yang dipakai bareng sama select & textarea di seluruh aplikasi.
     return (
         <input
             {...props}
             type={type}
-            className={
-                'block w-full rounded-lg border-slate-300 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:ring-brand-500 ' +
-                className
-            }
+            className={'form-field ' + className}
             ref={localRef}
         />
     );

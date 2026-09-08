@@ -20,15 +20,15 @@ export default function ForgotPassword({ status }) {
             <Head title="Forgot Password" />
 
             <div className="mb-6">
-                <h2 className="text-lg font-semibold text-slate-900">Lupa Password</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <h2 className="text-[16.5px] font-extrabold text-ink">Lupa Password</h2>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
                     Tidak masalah. Masukkan alamat email kamu dan kami akan
                     mengirimkan link untuk membuat password baru.
                 </p>
             </div>
 
             {status && (
-                <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+                <div className="mb-4 rounded-[14px] bg-success-soft px-4 py-3 text-[12.5px] font-semibold text-success">
                     {status}
                 </div>
             )}

@@ -39,6 +39,67 @@ class User extends Authenticatable
     }
 
     /**
+     * Perusahaan (entity) yang ada di grup Visinema.
+     *
+     * Sengaja dikunci sebagai daftar tetap di sini - BUKAN tabel terpisah
+     * kayak Departement - karena jumlahnya memang cuma tiga dan nggak nambah
+     * seiring waktu, persis kayak daftar role approval. Departemen beda
+     * ceritanya: itu bisa nambah/pecah, makanya dia punya tabel sendiri.
+     *
+     * Key   = nilai yang beneran disimpan di kolom `entity`. Hurufnya besar
+     *         semua, ngikutin format file HR yang diimpor lewat
+     *         `php artisan employees:import` - jadi data lama tetap cocok.
+     * Value = label yang ditampilkan di dropdown.
+     *
+     * Urutannya ngikutin jumlah karyawan (VP paling banyak) biar yang paling
+     * sering dipilih ada di paling atas.
+     */
+    public const ENTITIES = [
+        'PT VISINEMA PICTURES' => 'PT Visinema Pictures (VP)',
+        'PT VISINEMA KONTEN INDONESIA' => 'PT Visinema Konten Indonesia (VKI)',
+        'PT BIOSKOP DIGITAL INDONESIA' => 'PT Bioskop Digital Indonesia (BDI)',
+    ];
+
+    /**
+     * Daftar perusahaan dalam bentuk siap pakai buat dropdown di frontend.
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    public static function entityOptions(): array
+    {
+        $options = [];
+
+        foreach (self::ENTITIES as $value => $label) {
+            $options[] = ['value' => $value, 'label' => $label];
+        }
+
+        return $options;
+    }
+
+    /**
+     * Samakan penulisan nama perusahaan ke format resmi kalau bedanya cuma
+     * huruf besar/kecil (misal file HR nulis "PT Visinema Pictures").
+     * Kalau memang nggak ada di daftar, dikembalikan apa adanya biar
+     * datanya nggak hilang - yang manggil yang mutusin mau diapain.
+     */
+    public static function normalizeEntity(?string $entity): ?string
+    {
+        if ($entity === null || trim($entity) === '') {
+            return null;
+        }
+
+        $entity = trim($entity);
+
+        foreach (array_keys(self::ENTITIES) as $official) {
+            if (strcasecmp($entity, $official) === 0) {
+                return $official;
+            }
+        }
+
+        return $entity;
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -51,6 +112,7 @@ class User extends Authenticatable
         'position',
         'departement_id',
         'role',
+        'can_manage_users',
         'is_active',
     ];
 
@@ -75,6 +137,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'can_manage_users' => 'boolean',
         ];
     }
 

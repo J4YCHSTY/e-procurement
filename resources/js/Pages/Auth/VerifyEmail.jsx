@@ -16,8 +16,8 @@ export default function VerifyEmail({ status }) {
             <Head title="Email Verification" />
 
             <div className="mb-6">
-                <h2 className="text-lg font-semibold text-slate-900">Verifikasi Email</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <h2 className="text-[16.5px] font-extrabold text-ink">Verifikasi Email</h2>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
                     Terima kasih sudah mendaftar! Sebelum memulai, mohon
                     verifikasi alamat email kamu dengan klik link yang baru
                     saja kami kirimkan. Kalau belum menerima emailnya, kami
@@ -26,7 +26,7 @@ export default function VerifyEmail({ status }) {
             </div>
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+                <div className="mb-4 rounded-[14px] bg-success-soft px-4 py-3 text-[12.5px] font-semibold text-success">
                     Link verifikasi baru sudah dikirim ke alamat email yang
                     kamu daftarkan.
                 </div>
@@ -42,7 +42,7 @@ export default function VerifyEmail({ status }) {
                         href={route('logout')}
                         method="post"
                         as="button"
-                        className="text-sm font-medium text-slate-500 hover:text-slate-700"
+                        className="text-[12.5px] font-semibold text-ink-muted hover:text-ink"
                     >
                         Log Out
                     </Link>

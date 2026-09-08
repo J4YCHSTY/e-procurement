@@ -22,13 +22,13 @@ class MasterEmployeeSeeder extends Seeder
     public function run(): void
     {
         $employees = [
-            ['name' => 'Admin IT Pusat', 'email' => 'it@office.com', 'entity' => 'Kantor Pusat', 'position' => 'IT Manager', 'departement_id' => 1, 'role' => 'it'],
-            ['name' => 'Bapak Head Ops', 'email' => 'head@office.com', 'entity' => 'Kantor Pusat', 'position' => 'Head of Operations', 'departement_id' => 5, 'role' => 'head'],
-            ['name' => 'Staff Procurement', 'email' => 'procurement@office.com', 'entity' => 'Kantor Pusat', 'position' => 'Purchasing Officer', 'departement_id' => 3, 'role' => 'procurement'],
-            ['name' => 'Staff Finance', 'email' => 'finance@office.com', 'entity' => 'Kantor Pusat', 'position' => 'Finance AP', 'departement_id' => 2, 'role' => 'finance'],
-            ['name' => 'Karyawan VP', 'email' => 'user.vp@office.com', 'entity' => 'VP', 'position' => 'Staff Ops', 'departement_id' => 5, 'role' => 'user'],
-            ['name' => 'Karyawan VKI', 'email' => 'user.vki@office.com', 'entity' => 'VKI', 'position' => 'Staff HR', 'departement_id' => 4, 'role' => 'user'],
-            ['name' => 'Karyawan BO', 'email' => 'user.bo@office.com', 'entity' => 'BO', 'position' => 'Staff Admin', 'departement_id' => 2, 'role' => 'user'],
+            ['name' => 'Admin IT Pusat', 'email' => 'it@office.com', 'entity' => 'PT VISINEMA PICTURES', 'position' => 'IT Manager', 'departement_id' => 1, 'role' => 'it', 'can_manage_users' => true],
+            ['name' => 'Bapak Head Ops', 'email' => 'head@office.com', 'entity' => 'PT VISINEMA PICTURES', 'position' => 'Head of Operations', 'departement_id' => 5, 'role' => 'head'],
+            ['name' => 'Staff Procurement', 'email' => 'procurement@office.com', 'entity' => 'PT VISINEMA PICTURES', 'position' => 'Purchasing Officer', 'departement_id' => 3, 'role' => 'procurement'],
+            ['name' => 'Staff Finance', 'email' => 'finance@office.com', 'entity' => 'PT VISINEMA PICTURES', 'position' => 'Finance AP', 'departement_id' => 2, 'role' => 'finance'],
+            ['name' => 'Karyawan VP', 'email' => 'user.vp@office.com', 'entity' => 'PT VISINEMA PICTURES', 'position' => 'Staff Ops', 'departement_id' => 5, 'role' => 'user'],
+            ['name' => 'Karyawan VKI', 'email' => 'user.vki@office.com', 'entity' => 'PT VISINEMA KONTEN INDONESIA', 'position' => 'Staff HR', 'departement_id' => 4, 'role' => 'user'],
+            ['name' => 'Karyawan BDI', 'email' => 'user.bdi@office.com', 'entity' => 'PT BIOSKOP DIGITAL INDONESIA', 'position' => 'Staff Admin', 'departement_id' => 2, 'role' => 'user'],
         ];
 
         foreach ($employees as $emp) {

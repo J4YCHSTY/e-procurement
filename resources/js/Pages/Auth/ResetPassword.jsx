@@ -26,8 +26,8 @@ export default function ResetPassword({ token, email }) {
             <Head title="Reset Password" />
 
             <div className="mb-6">
-                <h2 className="text-lg font-semibold text-slate-900">Reset Password</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <h2 className="text-[16.5px] font-extrabold text-ink">Reset Password</h2>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
                     Masukkan password baru kamu di bawah ini.
                 </p>
             </div>

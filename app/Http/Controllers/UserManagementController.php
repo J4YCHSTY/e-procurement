@@ -13,10 +13,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * User Management - khusus role 'it'. Semua otorisasi dicek lewat
- * UserPolicy (lihat app/Policies/UserPolicy.php), bukan dicek manual di
- * sini, biar konsisten sama pola RequestPolicy yang udah dipakai di
- * ApprovalController.
+ * User Management - khusus akun yang punya can_manage_users = true (lepas
+ * dari role approval-nya apa). Semua otorisasi dicek lewat UserPolicy
+ * (lihat app/Policies/UserPolicy.php), bukan dicek manual di sini, biar
+ * konsisten sama pola RequestPolicy yang udah dipakai di ApprovalController.
  */
 class UserManagementController extends Controller
 {
@@ -24,7 +24,21 @@ class UserManagementController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
+        $search = trim((string) $request->input('search', ''));
+
         $users = User::with('departement')
+            // Pencarian dikerjain di database, BUKAN di frontend. Kalau
+            // difilter di React, yang kesaring cuma 15 baris punya halaman
+            // yang lagi kebuka - user bakal ngira datanya nggak ada padahal
+            // ada di halaman lain. withQueryString() di bawah yang bikin
+            // kata kuncinya kebawa waktu pindah halaman.
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('position', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();
@@ -32,6 +46,18 @@ class UserManagementController extends Controller
         return Inertia::render('Users/Index', [
             'users' => $users,
             'departements' => Departement::orderBy('name')->get(['id', 'name']),
+            // Daftar perusahaan dikirim dari sini (sumbernya App\Models\User)
+            // supaya frontend nggak nyimpen salinan daftarnya sendiri.
+            'entities' => User::entityOptions(),
+            'filters' => ['search' => $search],
+            // Dihitung dari seluruh tabel, bukan dari halaman yang lagi
+            // kebuka, biar angkanya tetap benar walau lagi difilter.
+            'stats' => [
+                'total' => User::count(),
+                'active' => User::where('is_active', true)->count(),
+                'inactive' => User::where('is_active', false)->count(),
+                'managers' => User::where('can_manage_users', true)->count(),
+            ],
         ]);
     }
 
@@ -56,13 +82,22 @@ class UserManagementController extends Controller
 
         $validated = $this->validatedProfile($request, $user);
 
-        // IT nggak boleh ganti role akunnya sendiri lewat sini - kalau cuma
-        // ada satu akun IT dan rolenya kepencet ganti ke 'user', nggak ada
-        // lagi yang bisa buka User Management buat ngembaliinnya.
-        if ($user->id === Auth::id() && $validated['role'] !== $user->role) {
-            return back()->withErrors([
-                'role' => 'Kamu tidak bisa mengubah role akun kamu sendiri. Minta IT lain buat ubah ini.',
-            ]);
+        // Nggak boleh ganti role ATAU cabut akses can_manage_users akunnya
+        // sendiri lewat sini - kalau cuma ada satu akun yang bisa manage
+        // user terus dia cabut aksesnya sendiri, nggak ada lagi yang bisa
+        // buka User Management buat ngembaliinnya (self-lockout).
+        if ($user->id === Auth::id()) {
+            if ($validated['role'] !== $user->role) {
+                return back()->withErrors([
+                    'role' => 'Kamu tidak bisa mengubah role akun kamu sendiri. Minta rekan yang lain buat ubah ini.',
+                ]);
+            }
+
+            if ($validated['can_manage_users'] !== $user->can_manage_users) {
+                return back()->withErrors([
+                    'can_manage_users' => 'Kamu tidak bisa mengubah akses Manajemen User punya akun kamu sendiri. Minta rekan yang lain buat ubah ini.',
+                ]);
+            }
         }
 
         $user->update($validated);
@@ -99,16 +134,36 @@ class UserManagementController extends Controller
      */
     private function validatedProfile(Request $request, ?User $user = null): array
     {
-        return $request->validate([
+        // Perusahaan divalidasi ke daftar resmi (User::ENTITIES), bukan lagi
+        // teks bebas. Nilai lama punya user yang lagi diedit ikut diizinkan:
+        // kalau ada akun hasil impor lama yang perusahaannya di luar daftar,
+        // admin tetap bisa ngedit nama/jabatannya tanpa dipaksa benerin
+        // kolom perusahaan dulu.
+        $allowedEntities = array_keys(User::ENTITIES);
+
+        if ($user?->entity && ! in_array($user->entity, $allowedEntities, true)) {
+            $allowedEntities[] = $user->entity;
+        }
+
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required', 'string', 'email', 'max:255',
                 Rule::unique('master_employees', 'email')->ignore($user?->id),
             ],
-            'entity' => ['nullable', 'string', 'max:255'],
+            'entity' => ['nullable', 'string', 'max:255', Rule::in($allowedEntities)],
             'position' => ['nullable', 'string', 'max:255'],
             'departement_id' => ['nullable', 'exists:departements,id'],
             'role' => ['required', Rule::in(['user', 'head', 'it', 'finance', 'procurement'])],
+            'can_manage_users' => ['boolean'],
         ]);
+
+        // Dibaca terpisah lewat $request->boolean() (bukan cuma ngandelin
+        // validate() di atas) biar kolomnya SELALU ada di array hasil,
+        // default false kalau nggak dikirim sama sekali dari request-nya -
+        // jadi nggak ada celah "checkbox nggak kecentang jadi field ilang".
+        $validated['can_manage_users'] = $request->boolean('can_manage_users');
+
+        return $validated;
     }
 }
