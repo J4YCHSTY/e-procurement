@@ -28,8 +28,7 @@ use Throwable;
  *   - Departemen / Department (opsional - kalau nama departemennya belum
  *     ada di sistem, otomatis dibuatkan baru)
  *   - Role / Role Approval   (opsional, default 'user' kalau kosong atau
- *     nilainya nggak dikenal - harus salah satu dari: user, head, it,
- *     finance, procurement)
+ *     nilainya nggak dikenal - harus salah satu dari: user, head, it_head, it)
  *   - Bisa Akses Manajemen User (opsional, default tidak - isi dengan
  *     ya/yes/true/1 kalau orang ini perlu buka menu Manajemen User.
  *     Ini KOLOM TERPISAH dari Role - lihat catatan di UserPolicy kenapa
@@ -47,7 +46,7 @@ class ImportEmployees extends Command
 
     protected $description = 'Import/update data karyawan dari file Excel jadi akun login (upsert berdasarkan email)';
 
-    private const VALID_ROLES = ['user', 'head', 'it', 'finance', 'procurement'];
+    private const VALID_ROLES = ['user', 'head', 'it_head', 'it'];
 
     /**
      * Alias nama header yang dikenali per kolom, semua dibandingkan dalam

@@ -49,6 +49,7 @@ class UserManagementController extends Controller
             // Daftar perusahaan dikirim dari sini (sumbernya App\Models\User)
             // supaya frontend nggak nyimpen salinan daftarnya sendiri.
             'entities' => User::entityOptions(),
+            'roles' => User::roleOptions(),
             'filters' => ['search' => $search],
             // Dihitung dari seluruh tabel, bukan dari halaman yang lagi
             // kebuka, biar angkanya tetap benar walau lagi difilter.
@@ -154,7 +155,7 @@ class UserManagementController extends Controller
             'entity' => ['nullable', 'string', 'max:255', Rule::in($allowedEntities)],
             'position' => ['nullable', 'string', 'max:255'],
             'departement_id' => ['nullable', 'exists:departements,id'],
-            'role' => ['required', Rule::in(['user', 'head', 'it', 'finance', 'procurement'])],
+            'role' => ['required', Rule::in(array_keys(User::ROLES))],
             'can_manage_users' => ['boolean'],
         ]);
 

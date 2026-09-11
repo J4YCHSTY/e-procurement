@@ -1,13 +1,18 @@
 import InputError from '@/Components/InputError';
+import PreferenceImageField from '@/Components/PreferenceImageField';
 import PrimaryButton from '@/Components/PrimaryButton';
-import { useForm } from '@inertiajs/react';
+import SignatureGate from '@/Components/SignatureGate';
+import { useForm, usePage } from '@inertiajs/react';
 
 const HardwareForm = () => {
+    const user = usePage().props.auth.user;
     const today = new Date().toISOString().split('T')[0];
     const { data, setData, post, processing, errors } = useForm({
         request_date: today,
         hardware_type: '',
         hardware_recommendation: '',
+        custom_hardware_name: '',
+        preference_image: null,
         justification: '',
         digital_signature: false,
     });
@@ -27,6 +32,11 @@ const HardwareForm = () => {
         ],
     };
     const currentRecommendations = recommendedDevices[data.hardware_type] || [];
+
+    // Kalau pemohon memilih perangkat di luar standar, tidak ada spesifikasi
+    // baku yang bisa dijadikan acuan - jadi gambarnya yang jadi acuan.
+    const preferenceRequired = data.hardware_recommendation === 'custom';
+
     const submitHardware = (e) => {
         e.preventDefault();
         post(route('request.hardware.store'));
@@ -99,12 +109,16 @@ const HardwareForm = () => {
                         <select
                             className="form-field"
                             value={data.hardware_recommendation}
-                            onChange={(e) =>
+                            onChange={(e) => {
                                 setData(
                                     'hardware_recommendation',
                                     e.target.value,
-                                )
-                            }
+                                );
+
+                                if (e.target.value !== 'custom') {
+                                    setData('custom_hardware_name', '');
+                                }
+                            }}
                             required
                         >
                             <option value="">
@@ -123,6 +137,41 @@ const HardwareForm = () => {
                     </div>
                 )}
 
+                {preferenceRequired && (
+                    <div>
+                        <label className="form-label">
+                            Nama Perangkat yang Diajukan{' '}
+                            <span className="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="form-field"
+                            placeholder="Contoh: MacBook Pro 14 M3 - 16GB / 512GB"
+                            value={data.custom_hardware_name}
+                            onChange={(e) =>
+                                setData('custom_hardware_name', e.target.value)
+                            }
+                        />
+                        <p className="mt-1.5 text-xs text-ink-faint">
+                            Tulis merek dan tipenya selengkap mungkin, ini yang
+                            dipakai procurement buat mencari penawaran.
+                        </p>
+                        <InputError message={errors.custom_hardware_name} />
+                    </div>
+                )}
+
+                <PreferenceImageField
+                    value={data.preference_image}
+                    onChange={(file) => setData('preference_image', file)}
+                    error={errors.preference_image}
+                    required={preferenceRequired}
+                    hint={
+                        preferenceRequired
+                            ? 'Karena perangkatnya di luar standar perusahaan, lampirkan tangkapan layar barang yang kamu maksud supaya procurement tahu persis yang dicari.'
+                            : undefined
+                    }
+                />
+
                 <div>
                     <label className="form-label">
                         Alasan Pengajuan &amp; Jelaskan Spesifikasi Khusus (Jika
@@ -138,6 +187,8 @@ const HardwareForm = () => {
                     ></textarea>
                     <InputError message={errors.justification} />
                 </div>
+
+                <SignatureGate />
 
                 <div className="flex items-start gap-3 rounded-[14px] border border-line bg-surface-sunken px-4 py-3.5">
                     <input
@@ -162,7 +213,11 @@ const HardwareForm = () => {
                 <div className="flex justify-end border-t border-line pt-[18px]">
                     <PrimaryButton
                         type="submit"
-                        disabled={!data.digital_signature || processing}
+                        disabled={
+                            !data.digital_signature ||
+                            !user.has_signature ||
+                            processing
+                        }
                     >
                         {processing ? 'Mengirim...' : 'Kirim Pengajuan'}
                     </PrimaryButton>

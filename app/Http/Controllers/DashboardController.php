@@ -28,25 +28,50 @@ class DashboardController extends Controller
             // Dipakai frontend buat nentuin nampilin tab approval atau nggak.
             // Ganti isManager yang lama (nebak dari string position) jadi
             // beneran ngecek: role user ini punya jatah approval di tahap manapun?
-            'canApprove' => $this->statusToReviewFor($user) !== null,
+            'canApprove' => $this->statusesToReviewFor($user) !== [],
         ]);
     }
 
     /**
-     * Status mana yang jadi jatah approval user ini, berdasarkan role-nya.
-     * null artinya role ini nggak punya jatah approval sama sekali (role 'user').
+     * Status mana saja yang jadi jatah user ini, berdasarkan role-nya.
+     * Array kosong artinya role ini nggak punya jatah sama sekali (role 'user').
+     *
+     * IT Admin memegang LEBIH DARI SATU status - dia mengawal berkasnya dari
+     * saat diserahkan ke procurement sampai barangnya sampai. Itu sebabnya
+     * method ini mengembalikan array, bukan satu nilai.
+     *
+     * @return array<int, string>
      */
-    private function statusToReviewFor(User $user): ?string
+    private function statusesToReviewFor(User $user): array
     {
         return match ($user->role) {
-            'head' => RequestStatus::WaitingHeadApproval->value,
-            'it' => RequestStatus::WaitingItApproval->value,
-            'finance' => RequestStatus::WaitingFinanceApproval->value,
-            // Procurement bukan approval berjenjang, tapi tahap eksekusi
-            // administratif setelah semua approval (head/it/finance) lolos.
-            'procurement' => RequestStatus::Approved->value,
-            default => null,
+            'head' => [RequestStatus::WaitingHeadApproval->value],
+            'it_head' => [RequestStatus::WaitingHeadItApproval->value],
+            'it' => array_map(
+                fn (RequestStatus $status) => $status->value,
+                RequestStatus::itAdminStages(),
+            ),
+            default => [],
         };
+    }
+
+    /**
+     * Tahap TERAKHIR yang jadi tanggung jawab user ini.
+     *
+     * Dipakai buat memisahkan "masih jadi urusan dia" dari "sudah lewat dia"
+     * di riwayat approval. Harus tahap terakhir, bukan yang pertama: kalau
+     * pakai yang pertama, pengajuan yang masih ada di tahap kedua IT Admin
+     * akan muncul di antrean DAN di riwayat sekaligus.
+     */
+    private function lastStageFor(User $user): ?RequestStatus
+    {
+        $statuses = $this->statusesToReviewFor($user);
+
+        if ($statuses === []) {
+            return null;
+        }
+
+        return RequestStatus::from(end($statuses));
     }
 
     /**
@@ -55,20 +80,20 @@ class DashboardController extends Controller
      */
     private function pendingApprovalsFor(User $user)
     {
-        $statusToReview = $this->statusToReviewFor($user);
+        $statusesToReview = $this->statusesToReviewFor($user);
 
-        if ($statusToReview === null) {
+        if ($statusesToReview === []) {
             return [];
         }
 
         // Head cuma boleh approve pengajuan dari departemennya sendiri.
-        // Role lain (it/finance/procurement) tetap lintas departemen karena
-        // mereka tim terpusat, bukan per-departemen.
+        // Role lain (it_head/it) tetap lintas departemen karena mereka tim
+        // terpusat, bukan per-departemen.
         $scopeToOwnDepartment = function ($query) use ($user) {
             $query->whereHas('user', fn ($q) => $q->where('departement_id', $user->departement_id));
         };
 
-        $pendingHardware = HardwareRequest::where('status', $statusToReview)
+        $pendingHardware = HardwareRequest::whereIn('status', $statusesToReview)
             ->when($user->role === 'head', $scopeToOwnDepartment)
             ->with('user')
             ->get()
@@ -78,12 +103,20 @@ class DashboardController extends Controller
                 'request_date' => $item->request_date,
                 'requester_name' => $item->user?->name,
                 'title' => $item->hardware_type,
-                'detail' => $item->hardware_recommendation,
+                'detail' => $item->hardware_recommendation === 'custom'
+                    ? $item->custom_hardware_name
+                    : $item->hardware_recommendation,
                 'justification' => $item->justification,
+                // URL-nya cuma dikirim kalau lampirannya memang ada; gambarnya
+                // sendiri tetap lewat route ber-otorisasi, bukan folder publik.
+                'preference_image_url' => $item->preference_image_path
+                    ? route('request.hardware.preference-image', $item->id)
+                    : null,
+                'detail_url' => route('request.show', ['type' => 'hardware', 'id' => $item->id]),
                 'status' => $item->status,
             ]);
 
-        $pendingSoftware = SoftwareRequest::where('status', $statusToReview)
+        $pendingSoftware = SoftwareRequest::whereIn('status', $statusesToReview)
             ->when($user->role === 'head', $scopeToOwnDepartment)
             ->with('user')
             ->get()
@@ -95,6 +128,10 @@ class DashboardController extends Controller
                 'title' => $item->software_name,
                 'detail' => $item->license_count.' lisensi, '.$item->duration_months.' bulan',
                 'justification' => $item->justification,
+                'preference_image_url' => $item->preference_image_path
+                    ? route('request.software.preference-image', $item->id)
+                    : null,
+                'detail_url' => route('request.show', ['type' => 'software', 'id' => $item->id]),
                 'status' => $item->status,
             ]);
 
@@ -113,30 +150,18 @@ class DashboardController extends Controller
      * sesudahnya (yang berarti tahap dia sendiri sempat menyetujui duluan).
      *
      * Ini bisa dihitung murni dari RequestStatus::order() tanpa perlu tau
-     * "siapa yang approve tahap sebelumnya", karena alur approval-nya
-     * linear (Head -> IT -> Finance) - jadi begitu status sekarang udah
+     * "siapa yang approve tahap sebelumnya", karena alurnya linear
+     * (Head -> Head of IT -> IT Admin) - jadi begitu status sekarang udah
      * lewat urutan tahap seseorang, otomatis tahap dia pasti udah
      * disetujui duluan.
      */
     private function approvalHistoryFor(User $user)
     {
-        // Procurement bukan approval berjenjang - riwayatnya cuma pengajuan
-        // yang udah dia tandai selesai (status COMPLETED).
-        if ($user->role === 'procurement') {
-            return $this->mapApprovalHistory(
-                HardwareRequest::where('status', RequestStatus::Completed->value)->with('user')->latest()->get(),
-                SoftwareRequest::where('status', RequestStatus::Completed->value)->with('user')->latest()->get(),
-                null
-            );
-        }
+        $roleStage = $this->lastStageFor($user);
 
-        $statusToReview = $this->statusToReviewFor($user);
-
-        if ($statusToReview === null) {
+        if ($roleStage === null) {
             return [];
         }
-
-        $roleStage = RequestStatus::from($statusToReview);
 
         // Status (bukan REJECTED) yang urutannya udah lewat tahap user ini -
         // berarti disetujui maju oleh tahap ini.
@@ -146,13 +171,9 @@ class DashboardController extends Controller
             ->values()
             ->all();
 
-        // Tahap-tahap approval berjenjang (Head/IT/Finance) yang urutannya
+        // Tahap-tahap yang berupa keputusan (Head / Head of IT) yang urutannya
         // >= tahap user ini - dipakai buat cocokin rejected_at_stage.
-        $reachableRejectionStages = collect([
-            RequestStatus::WaitingHeadApproval,
-            RequestStatus::WaitingItApproval,
-            RequestStatus::WaitingFinanceApproval,
-        ])
+        $reachableRejectionStages = collect(RequestStatus::decisionStages())
             ->filter(fn (RequestStatus $status) => $status->order() >= $roleStage->order())
             ->map(fn (RequestStatus $status) => $status->value)
             ->values()
@@ -197,8 +218,9 @@ class DashboardController extends Controller
     private function mapApprovalHistory($hardwareItems, $softwareItems, ?RequestStatus $roleStage)
     {
         $decisionFor = function ($item) use ($roleStage) {
-            if ($roleStage === null) {
-                // Procurement: satu-satunya aksi mereka adalah "tandai selesai".
+            if ($roleStage === null || in_array($roleStage, RequestStatus::itAdminStages(), true)) {
+                // IT Admin tidak menyetujui apa-apa - dia mencatat perjalanan
+                // barangnya, jadi label riwayatnya juga beda.
                 return 'completed';
             }
 
@@ -217,8 +239,14 @@ class DashboardController extends Controller
             'request_date' => $item->request_date,
             'requester_name' => $item->user?->name,
             'title' => $item->hardware_type,
-            'detail' => $item->hardware_recommendation,
+            'detail' => $item->hardware_recommendation === 'custom'
+                    ? $item->custom_hardware_name
+                    : $item->hardware_recommendation,
             'justification' => $item->justification,
+            'preference_image_url' => $item->preference_image_path
+                ? route('request.hardware.preference-image', $item->id)
+                : null,
+            'detail_url' => route('request.show', ['type' => 'hardware', 'id' => $item->id]),
             'status' => $item->status,
             'your_decision' => $decisionFor($item),
             'rejected_by_name' => $item->rejectedBy?->name,
@@ -233,6 +261,10 @@ class DashboardController extends Controller
             'title' => $item->software_name,
             'detail' => $item->license_count.' lisensi, '.$item->duration_months.' bulan',
             'justification' => $item->justification,
+            'preference_image_url' => $item->preference_image_path
+                ? route('request.software.preference-image', $item->id)
+                : null,
+            'detail_url' => route('request.show', ['type' => 'software', 'id' => $item->id]),
             'status' => $item->status,
             'your_decision' => $decisionFor($item),
             'rejected_by_name' => $item->rejectedBy?->name,

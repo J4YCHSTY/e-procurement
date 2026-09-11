@@ -15,15 +15,35 @@ class ApprovalWorkflowTest extends TestCase
 
     private function makeUser(string $role, int $departementId, string $email): User
     {
-        return User::create([
+        $user = User::create([
             'name' => ucfirst($role).' Dept'.$departementId,
             'email' => $email,
             'password' => bcrypt('password'),
-            'entity' => 'Kantor Pusat',
+            'entity' => 'PT VISINEMA PICTURES',
             'position' => ucfirst($role),
             'departement_id' => $departementId,
             'role' => $role,
         ]);
+
+        // Sejak tanda tangan digital jadi syarat mengirim pengajuan, akun uji
+        // di sini dianggap sudah punya. Yang dicek RequestController cuma
+        // kolomnya terisi atau tidak, jadi berkasnya sendiri tidak perlu ada -
+        // pembuatan tanda tangan yang sebenarnya diuji di SignatureTest.
+        $user->forceFill([
+            'signature_path' => 'signatures/uji-'.$user->id.'.sig',
+            'signature_uploaded_at' => now(),
+        ])->save();
+
+        return $user;
+    }
+
+    private function makeUserWithoutSignature(string $role, int $departementId, string $email): User
+    {
+        $user = $this->makeUser($role, $departementId, $email);
+
+        $user->forceFill(['signature_path' => null, 'signature_uploaded_at' => null])->save();
+
+        return $user;
     }
 
     private function makeHardwareRequest(User $requester, RequestStatus $status): HardwareRequest
@@ -58,7 +78,7 @@ class ApprovalWorkflowTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
-        $this->assertEquals(RequestStatus::WaitingItApproval->value, $request->fresh()->status);
+        $this->assertEquals(RequestStatus::WaitingHeadItApproval->value, $request->fresh()->status);
     }
 
     public function test_head_cannot_approve_request_from_other_department(): void
@@ -107,74 +127,85 @@ class ApprovalWorkflowTest extends TestCase
         $this->assertNotContains($otherReq->id, $pendingIds);
     }
 
-    // --- IT & Finance: tetap lintas departemen (gak berubah) ---
+    // --- Head of IT: menilai kelayakan teknis, lintas departemen ---
 
-    public function test_it_can_approve_request_regardless_of_department(): void
+    public function test_head_of_it_can_approve_request_regardless_of_department(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $itHead = $this->makeUser('it_head', 1, 'ithead@test.com');
         $requester = $this->makeUser('user', 2, 'user-b@test.com');
-        $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingItApproval);
+        $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingHeadItApproval);
 
-        $response = $this->actingAs($it)->post(route('request.hardware.approve', $request->id));
+        $response = $this->actingAs($itHead)->post(route('request.hardware.approve', $request->id));
 
         $response->assertRedirect();
-        $this->assertEquals(RequestStatus::WaitingFinanceApproval->value, $request->fresh()->status);
+        $this->assertEquals(RequestStatus::OnExternalProcess->value, $request->fresh()->status);
     }
 
-    public function test_finance_approval_moves_status_to_approved(): void
+    public function test_head_of_it_cannot_approve_request_still_awaiting_department_head(): void
     {
         $this->seedDepartements();
-        $finance = $this->makeUser('finance', 1, 'finance@test.com');
+        $itHead = $this->makeUser('it_head', 1, 'ithead@test.com');
         $requester = $this->makeUser('user', 2, 'user-b@test.com');
-        $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingFinanceApproval);
+        $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingHeadApproval);
 
-        $response = $this->actingAs($finance)->post(route('request.hardware.approve', $request->id));
-
-        $response->assertRedirect();
-        $this->assertEquals(RequestStatus::Approved->value, $request->fresh()->status);
-    }
-
-    // --- Procurement: eksekusi administratif, bukan approval ---
-
-    public function test_procurement_can_mark_approved_request_as_completed(): void
-    {
-        $this->seedDepartements();
-        $procurement = $this->makeUser('procurement', 1, 'procurement@test.com');
-        $requester = $this->makeUser('user', 2, 'user-b@test.com');
-        $request = $this->makeHardwareRequest($requester, RequestStatus::Approved);
-
-        $response = $this->actingAs($procurement)->post(route('request.hardware.approve', $request->id));
-
-        $response->assertRedirect();
-        $response->assertSessionHas('success');
-        $this->assertEquals(RequestStatus::Completed->value, $request->fresh()->status);
-    }
-
-    public function test_procurement_cannot_reject_approved_request(): void
-    {
-        $this->seedDepartements();
-        $procurement = $this->makeUser('procurement', 1, 'procurement@test.com');
-        $requester = $this->makeUser('user', 2, 'user-b@test.com');
-        $request = $this->makeHardwareRequest($requester, RequestStatus::Approved);
-
-        $response = $this->actingAs($procurement)->post(route('request.hardware.reject', $request->id));
+        $response = $this->actingAs($itHead)->post(route('request.hardware.approve', $request->id));
 
         $response->assertForbidden();
-        $this->assertEquals(RequestStatus::Approved->value, $request->fresh()->status);
+        $this->assertEquals(RequestStatus::WaitingHeadApproval->value, $request->fresh()->status);
     }
 
-    public function test_procurement_cannot_touch_request_still_awaiting_earlier_approval(): void
+    // --- IT Admin: pencatatan administratif, bukan keputusan approval ---
+
+    /**
+     * Tahap IT Admin punya isian wajib (catatan pengiriman, nomor seri), dan
+     * itu dikerjakan lewat halaman detail. Endpoint approval di dashboard
+     * sengaja menolaknya - kalau tidak, pengajuan bisa dimajukan sampai BAST
+     * tanpa nomor seri barangnya pernah terisi.
+     */
+    public function test_it_admin_cannot_advance_fulfillment_through_approval_endpoint(): void
     {
         $this->seedDepartements();
-        $procurement = $this->makeUser('procurement', 1, 'procurement@test.com');
+        $itAdmin = $this->makeUser('it', 1, 'itadmin@test.com');
         $requester = $this->makeUser('user', 2, 'user-b@test.com');
-        $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingFinanceApproval);
+        $request = $this->makeHardwareRequest($requester, RequestStatus::OnExternalProcess);
 
-        $response = $this->actingAs($procurement)->post(route('request.hardware.approve', $request->id));
+        $response = $this->actingAs($itAdmin)->post(route('request.hardware.approve', $request->id));
+
+        $response->assertSessionHas('error');
+        $this->assertEquals(RequestStatus::OnExternalProcess->value, $request->fresh()->status);
+    }
+
+    /**
+     * Di tahap ini berkasnya sudah jalan di procurement/finance di luar sistem.
+     * Kalau di sana batal, itu pembatalan - bukan penolakan approval. Dua hal
+     * itu sengaja tidak dicampur supaya riwayatnya tidak berbunyi seolah tim IT
+     * yang menolak, padahal keputusannya datang dari luar sistem.
+     */
+    public function test_it_admin_cannot_reject_externally_processed_request(): void
+    {
+        $this->seedDepartements();
+        $itAdmin = $this->makeUser('it', 1, 'itadmin@test.com');
+        $requester = $this->makeUser('user', 2, 'user-b@test.com');
+        $request = $this->makeHardwareRequest($requester, RequestStatus::OnExternalProcess);
+
+        $response = $this->actingAs($itAdmin)->post(route('request.hardware.reject', $request->id));
 
         $response->assertForbidden();
-        $this->assertEquals(RequestStatus::WaitingFinanceApproval->value, $request->fresh()->status);
+        $this->assertEquals(RequestStatus::OnExternalProcess->value, $request->fresh()->status);
+    }
+
+    public function test_it_admin_cannot_touch_request_still_awaiting_head_of_it(): void
+    {
+        $this->seedDepartements();
+        $itAdmin = $this->makeUser('it', 1, 'itadmin@test.com');
+        $requester = $this->makeUser('user', 2, 'user-b@test.com');
+        $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingHeadItApproval);
+
+        $response = $this->actingAs($itAdmin)->post(route('request.hardware.approve', $request->id));
+
+        $response->assertForbidden();
+        $this->assertEquals(RequestStatus::WaitingHeadItApproval->value, $request->fresh()->status);
     }
 
     // --- Flash message beneran nyampe ke Inertia props ---
@@ -352,16 +383,16 @@ class ApprovalWorkflowTest extends TestCase
         $this->assertEquals('approved', $entry['your_decision']);
     }
 
-    public function test_head_approval_history_includes_item_rejected_later_by_it(): void
+    public function test_head_approval_history_includes_item_rejected_later_by_head_of_it(): void
     {
         $this->seedDepartements();
         $head = $this->makeUser('head', 1, 'head@test.com');
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $itHead = $this->makeUser('it_head', 1, 'ithead@test.com');
         $requester = $this->makeUser('user', 1, 'user-a@test.com');
         $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingHeadApproval);
 
         $this->actingAs($head)->post(route('request.hardware.approve', $request->id));
-        $this->actingAs($it)->post(route('request.hardware.reject', $request->id));
+        $this->actingAs($itHead)->post(route('request.hardware.reject', $request->id));
 
         $response = $this->actingAs($head)
             ->withHeaders(['X-Inertia' => 'true'])
@@ -370,9 +401,9 @@ class ApprovalWorkflowTest extends TestCase
         $history = collect($response->json('props.approvalHistory'));
         $entry = $history->firstWhere('id', $request->id);
 
-        $this->assertNotNull($entry, 'Head tetap harus lihat pengajuan ini di riwayatnya walau belakangan ditolak IT.');
+        $this->assertNotNull($entry, 'Head tetap harus lihat pengajuan ini di riwayatnya walau belakangan ditolak Head of IT.');
         $this->assertEquals('approved', $entry['your_decision'], 'Head yang menyetujui, bukan yang menolak - jadi keputusan Head tetap "approved".');
-        $this->assertEquals($it->name, $entry['rejected_by_name']);
+        $this->assertEquals($itHead->name, $entry['rejected_by_name']);
     }
 
     public function test_head_approval_history_excludes_other_department(): void
@@ -395,39 +426,39 @@ class ApprovalWorkflowTest extends TestCase
         $this->assertNotContains($requestOtherDept->id, $historyIds);
     }
 
-    // --- Riwayat Approval: IT ---
+    // --- Riwayat Approval: Head of IT ---
 
-    public function test_it_approval_history_excludes_item_rejected_by_head_before_reaching_it(): void
+    public function test_head_of_it_approval_history_excludes_item_rejected_by_head_first(): void
     {
         $this->seedDepartements();
         $head = $this->makeUser('head', 1, 'head@test.com');
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $itHead = $this->makeUser('it_head', 1, 'ithead@test.com');
         $requester = $this->makeUser('user', 1, 'user-a@test.com');
         $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingHeadApproval);
 
         $this->actingAs($head)->post(route('request.hardware.reject', $request->id));
 
-        $response = $this->actingAs($it)
+        $response = $this->actingAs($itHead)
             ->withHeaders(['X-Inertia' => 'true'])
             ->get(route('dashboard'));
 
         $historyIds = collect($response->json('props.approvalHistory'))->pluck('id')->all();
 
-        $this->assertNotContains($request->id, $historyIds, 'Pengajuan yang ditolak Head sebelum sampai ke IT tidak boleh muncul di riwayat IT.');
+        $this->assertNotContains($request->id, $historyIds, 'Pengajuan yang ditolak Head sebelum sampai ke Head of IT tidak boleh muncul di riwayat Head of IT.');
     }
 
-    public function test_it_approval_history_includes_item_it_rejected_itself(): void
+    public function test_head_of_it_approval_history_includes_item_it_rejected_itself(): void
     {
         $this->seedDepartements();
         $head = $this->makeUser('head', 1, 'head@test.com');
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $itHead = $this->makeUser('it_head', 1, 'ithead@test.com');
         $requester = $this->makeUser('user', 1, 'user-a@test.com');
         $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingHeadApproval);
 
         $this->actingAs($head)->post(route('request.hardware.approve', $request->id));
-        $this->actingAs($it)->post(route('request.hardware.reject', $request->id));
+        $this->actingAs($itHead)->post(route('request.hardware.reject', $request->id));
 
-        $response = $this->actingAs($it)
+        $response = $this->actingAs($itHead)
             ->withHeaders(['X-Inertia' => 'true'])
             ->get(route('dashboard'));
 
@@ -438,78 +469,200 @@ class ApprovalWorkflowTest extends TestCase
         $this->assertEquals('rejected', $entry['your_decision']);
     }
 
-    // --- Riwayat Approval: Finance ---
+    // --- Riwayat Approval: IT Admin ---
 
-    public function test_finance_approval_history_excludes_item_rejected_by_it_before_reaching_finance(): void
+    public function test_it_admin_approval_history_excludes_item_rejected_before_reaching_it_admin(): void
     {
         $this->seedDepartements();
         $head = $this->makeUser('head', 1, 'head@test.com');
-        $it = $this->makeUser('it', 1, 'it@test.com');
-        $finance = $this->makeUser('finance', 1, 'finance@test.com');
+        $itHead = $this->makeUser('it_head', 1, 'ithead@test.com');
+        $itAdmin = $this->makeUser('it', 1, 'itadmin@test.com');
         $requester = $this->makeUser('user', 1, 'user-a@test.com');
         $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingHeadApproval);
 
         $this->actingAs($head)->post(route('request.hardware.approve', $request->id));
-        $this->actingAs($it)->post(route('request.hardware.reject', $request->id));
+        $this->actingAs($itHead)->post(route('request.hardware.reject', $request->id));
 
-        $response = $this->actingAs($finance)
+        $response = $this->actingAs($itAdmin)
             ->withHeaders(['X-Inertia' => 'true'])
             ->get(route('dashboard'));
 
         $historyIds = collect($response->json('props.approvalHistory'))->pluck('id')->all();
 
-        $this->assertNotContains($request->id, $historyIds, 'Pengajuan yang ditolak IT sebelum sampai ke Finance tidak boleh muncul di riwayat Finance.');
+        $this->assertNotContains($request->id, $historyIds, 'Pengajuan yang ditolak Head of IT sebelum sampai ke IT Admin tidak boleh muncul di riwayatnya.');
     }
 
-    public function test_finance_approval_history_includes_forward_approved_item(): void
+    /**
+     * Selama masih di salah satu tahap IT Admin, pengajuan ada di ANTREAN-nya.
+     * Dia baru pindah ke riwayat setelah lewat tahap terakhir IT Admin -
+     * kalau tidak, satu pengajuan muncul di dua tempat sekaligus.
+     */
+    public function test_it_admin_queue_and_history_do_not_overlap(): void
     {
         $this->seedDepartements();
-        $head = $this->makeUser('head', 1, 'head@test.com');
-        $it = $this->makeUser('it', 1, 'it@test.com');
-        $finance = $this->makeUser('finance', 1, 'finance@test.com');
+        $itAdmin = $this->makeUser('it', 1, 'itadmin@test.com');
         $requester = $this->makeUser('user', 1, 'user-a@test.com');
-        $request = $this->makeHardwareRequest($requester, RequestStatus::WaitingHeadApproval);
+        $onTheWay = $this->makeHardwareRequest($requester, RequestStatus::ItemOnTheWay);
+        $awaitingBast = $this->makeHardwareRequest($requester, RequestStatus::WaitingBastSignature);
 
-        $this->actingAs($head)->post(route('request.hardware.approve', $request->id));
-        $this->actingAs($it)->post(route('request.hardware.approve', $request->id));
-        $this->actingAs($finance)->post(route('request.hardware.approve', $request->id));
-
-        $response = $this->actingAs($finance)
+        $response = $this->actingAs($itAdmin)
             ->withHeaders(['X-Inertia' => 'true'])
             ->get(route('dashboard'));
 
-        $history = collect($response->json('props.approvalHistory'));
-        $entry = $history->firstWhere('id', $request->id);
+        $pendingIds = collect($response->json('props.pendingApprovals'))->pluck('id')->all();
+        $historyIds = collect($response->json('props.approvalHistory'))->pluck('id')->all();
 
-        $this->assertNotNull($entry);
-        $this->assertEquals('approved', $entry['your_decision']);
-        $this->assertEquals(RequestStatus::Approved->value, $entry['status']);
+        $this->assertContains($onTheWay->id, $pendingIds);
+        $this->assertNotContains($onTheWay->id, $historyIds);
+
+        $this->assertNotContains($awaitingBast->id, $pendingIds, 'Yang menunggu tanda tangan pemohon bukan lagi urusan IT Admin.');
+        $this->assertContains($awaitingBast->id, $historyIds);
     }
 
-    // --- Riwayat Approval: Procurement ---
+    // --- Tanda tangan digital jadi syarat mengirim pengajuan ---
 
-    public function test_procurement_approval_history_only_includes_completed_items(): void
+    public function test_pengajuan_ditolak_kalau_pemohon_belum_punya_tanda_tangan(): void
     {
         $this->seedDepartements();
-        $procurement = $this->makeUser('procurement', 1, 'procurement@test.com');
-        $requester = $this->makeUser('user', 1, 'user-a@test.com');
-        $request = $this->makeHardwareRequest($requester, RequestStatus::Approved);
+        $user = $this->makeUserWithoutSignature('user', 1, 'tanpa-ttd@test.com');
 
-        $beforeResponse = $this->actingAs($procurement)
-            ->withHeaders(['X-Inertia' => 'true'])
-            ->get(route('dashboard'));
-        $beforeIds = collect($beforeResponse->json('props.approvalHistory'))->pluck('id')->all();
-        $this->assertNotContains($request->id, $beforeIds, 'Yang baru APPROVED (belum ditandai selesai) belum boleh masuk riwayat procurement.');
+        $response = $this->actingAs($user)->post(route('request.hardware.store'), [
+            'request_date' => now()->toDateString(),
+            'hardware_type' => 'laptop',
+            'hardware_recommendation' => 'l1',
+            'justification' => 'Butuh laptop baru',
+            'digital_signature' => true,
+        ]);
 
-        $this->actingAs($procurement)->post(route('request.hardware.approve', $request->id));
+        $response->assertSessionHasErrors('digital_signature');
+        $this->assertDatabaseCount('hardware_requests', 0);
+    }
 
-        $afterResponse = $this->actingAs($procurement)
-            ->withHeaders(['X-Inertia' => 'true'])
-            ->get(route('dashboard'));
-        $history = collect($afterResponse->json('props.approvalHistory'));
-        $entry = $history->firstWhere('id', $request->id);
+    public function test_pengajuan_lolos_kalau_pemohon_sudah_punya_tanda_tangan(): void
+    {
+        $this->seedDepartements();
+        $user = $this->makeUser('user', 1, 'punya-ttd@test.com');
 
-        $this->assertNotNull($entry);
-        $this->assertEquals('completed', $entry['your_decision']);
+        $response = $this->actingAs($user)->post(route('request.hardware.store'), [
+            'request_date' => now()->toDateString(),
+            'hardware_type' => 'laptop',
+            'hardware_recommendation' => 'l1',
+            'justification' => 'Butuh laptop baru',
+            'digital_signature' => true,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('hardware_requests', 1);
+    }
+
+    // --- Perangkat di luar standar wajib disertai namanya ---
+
+    public function test_nama_perangkat_wajib_kalau_memilih_di_luar_standar(): void
+    {
+        $this->seedDepartements();
+        $user = $this->makeUser('user', 1, 'user-custom@test.com');
+
+        $response = $this->actingAs($user)->post(route('request.hardware.store'), [
+            'request_date' => now()->toDateString(),
+            'hardware_type' => 'laptop',
+            'hardware_recommendation' => 'custom',
+            'custom_hardware_name' => '',
+            'justification' => 'Butuh spesifikasi khusus',
+            'digital_signature' => true,
+        ]);
+
+        $response->assertSessionHasErrors('custom_hardware_name');
+        $this->assertDatabaseCount('hardware_requests', 0);
+    }
+
+    public function test_nama_perangkat_tersimpan_saat_memilih_di_luar_standar(): void
+    {
+        $this->seedDepartements();
+        $user = $this->makeUser('user', 1, 'user-custom@test.com');
+
+        $this->actingAs($user)->post(route('request.hardware.store'), [
+            'request_date' => now()->toDateString(),
+            'hardware_type' => 'laptop',
+            'hardware_recommendation' => 'custom',
+            'custom_hardware_name' => 'MacBook Pro 14 M3 16GB/512GB',
+            'preference_image' => \Illuminate\Http\UploadedFile::fake()->image('produk.png', 400, 300),
+            'justification' => 'Butuh spesifikasi khusus',
+            'digital_signature' => true,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            'MacBook Pro 14 M3 16GB/512GB',
+            HardwareRequest::firstOrFail()->custom_hardware_name
+        );
+    }
+
+    public function test_nama_perangkat_tidak_wajib_untuk_perangkat_standar(): void
+    {
+        $this->seedDepartements();
+        $user = $this->makeUser('user', 1, 'user-standar@test.com');
+
+        $this->actingAs($user)->post(route('request.hardware.store'), [
+            'request_date' => now()->toDateString(),
+            'hardware_type' => 'laptop',
+            'hardware_recommendation' => 'l1',
+            'justification' => 'Laptop lama sudah lambat',
+            'digital_signature' => true,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertNull(HardwareRequest::firstOrFail()->custom_hardware_name);
+    }
+
+    // --- Menyetujui menuntut tanda tangan, menolak tidak ---
+
+    public function test_penyetuju_tanpa_tanda_tangan_tidak_bisa_menyetujui(): void
+    {
+        $this->seedDepartements();
+        $pemohon = $this->makeUser('user', 1, 'pemohon@test.com');
+        $head = $this->makeUserWithoutSignature('head', 1, 'head-tanpa-ttd@test.com');
+        $request = $this->makeHardwareRequest($pemohon, RequestStatus::WaitingHeadApproval);
+
+        $response = $this->actingAs($head)
+            ->post(route('request.hardware.approve', $request->id));
+
+        $response->assertSessionHas('error');
+        $this->assertSame(
+            RequestStatus::WaitingHeadApproval->value,
+            $request->fresh()->status
+        );
+    }
+
+    public function test_penyetuju_dengan_tanda_tangan_bisa_menyetujui(): void
+    {
+        $this->seedDepartements();
+        $pemohon = $this->makeUser('user', 1, 'pemohon@test.com');
+        $head = $this->makeUser('head', 1, 'head-punya-ttd@test.com');
+        $request = $this->makeHardwareRequest($pemohon, RequestStatus::WaitingHeadApproval);
+
+        $this->actingAs($head)
+            ->post(route('request.hardware.approve', $request->id))
+            ->assertSessionHas('success');
+
+        $this->assertSame(
+            RequestStatus::WaitingHeadItApproval->value,
+            $request->fresh()->status
+        );
+    }
+
+    /**
+     * Menolak menghentikan alur - tidak ada dokumen yang ditandatangani, jadi
+     * tidak masuk akal menahannya sampai penyetuju membuat tanda tangan.
+     */
+    public function test_penyetuju_tanpa_tanda_tangan_tetap_bisa_menolak(): void
+    {
+        $this->seedDepartements();
+        $pemohon = $this->makeUser('user', 1, 'pemohon@test.com');
+        $head = $this->makeUserWithoutSignature('head', 1, 'head-tanpa-ttd@test.com');
+        $request = $this->makeHardwareRequest($pemohon, RequestStatus::WaitingHeadApproval);
+
+        $this->actingAs($head)
+            ->post(route('request.hardware.reject', $request->id))
+            ->assertSessionHas('success');
+
+        $this->assertSame(RequestStatus::Rejected->value, $request->fresh()->status);
     }
 }

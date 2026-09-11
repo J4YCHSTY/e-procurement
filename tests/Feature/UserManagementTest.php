@@ -18,10 +18,11 @@ class UserManagementTest extends TestCase
             'name' => ucfirst($role).'-'.$email,
             'email' => $email,
             'password' => Hash::make('password'),
-            'entity' => 'Kantor Pusat',
+            'entity' => 'PT VISINEMA PICTURES',
             'position' => ucfirst($role),
             'departement_id' => $departementId,
             'role' => $role,
+            'can_manage_users' => false,
             'is_active' => true,
         ], $overrides));
     }
@@ -31,12 +32,13 @@ class UserManagementTest extends TestCase
         Departement::forceCreate(['id' => 1, 'name' => 'Departemen A']);
     }
 
-    // --- Otorisasi: cuma role 'it' yang boleh akses ---
+    // --- Otorisasi: cuma yang can_manage_users = true yang boleh akses,
+    // lepas dari role approval-nya apa (lihat App\Policies\UserPolicy) ---
 
-    public function test_it_can_view_user_list(): void
+    public function test_can_manage_users_can_view_user_list(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
         $this->makeUser('user', 1, 'user-a@test.com');
 
         $response = $this->actingAs($it)
@@ -47,7 +49,34 @@ class UserManagementTest extends TestCase
         $this->assertGreaterThanOrEqual(2, count($response->json('props.users.data')));
     }
 
-    public function test_non_it_cannot_view_user_list(): void
+    public function test_it_role_without_can_manage_users_cannot_view_user_list(): void
+    {
+        // Regresi buat kasus nyata: role 'it' (approver global tahap IT)
+        // TIDAK otomatis dapat akses Manajemen User kalau can_manage_users-nya
+        // masih false - dua hal ini sengaja dipisah.
+        $this->seedDepartements();
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => false]);
+
+        $response = $this->actingAs($it)->get(route('users.index'));
+
+        $response->assertForbidden();
+    }
+
+    public function test_user_role_with_can_manage_users_can_view_user_list(): void
+    {
+        // Sisi sebaliknya: role 'user' biasa (nggak ikut approval apapun)
+        // tetap bisa akses Manajemen User kalau can_manage_users-nya true.
+        $this->seedDepartements();
+        $staff = $this->makeUser('user', 1, 'staff@test.com', ['can_manage_users' => true]);
+
+        $response = $this->actingAs($staff)
+            ->withHeaders(['X-Inertia' => 'true'])
+            ->get(route('users.index'));
+
+        $response->assertOk();
+    }
+
+    public function test_non_manager_cannot_view_user_list(): void
     {
         $this->seedDepartements();
         $head = $this->makeUser('head', 1, 'head@test.com');
@@ -59,15 +88,15 @@ class UserManagementTest extends TestCase
 
     // --- Create ---
 
-    public function test_it_can_create_new_user_with_default_password(): void
+    public function test_manager_can_create_new_user_with_default_password(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
 
         $response = $this->actingAs($it)->post(route('users.store'), [
             'name' => 'Karyawan Baru',
             'email' => 'baru@office.com',
-            'entity' => 'Kantor Pusat',
+            'entity' => 'PT VISINEMA PICTURES',
             'position' => 'Staff',
             'departement_id' => 1,
             'role' => 'user',
@@ -80,9 +109,29 @@ class UserManagementTest extends TestCase
         $this->assertNotNull($newUser);
         $this->assertTrue(Hash::check(User::defaultPassword(), $newUser->password));
         $this->assertTrue($newUser->is_active);
+        $this->assertFalse($newUser->can_manage_users);
     }
 
-    public function test_non_it_cannot_create_user(): void
+    public function test_manager_can_create_new_user_with_manage_users_access(): void
+    {
+        $this->seedDepartements();
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
+
+        $response = $this->actingAs($it)->post(route('users.store'), [
+            'name' => 'Karyawan IT Baru',
+            'email' => 'it-baru@office.com',
+            'role' => 'user',
+            'can_manage_users' => true,
+        ]);
+
+        $response->assertRedirect();
+
+        $newUser = User::where('email', 'it-baru@office.com')->first();
+        $this->assertTrue($newUser->can_manage_users);
+        $this->assertEquals('user', $newUser->role);
+    }
+
+    public function test_non_manager_cannot_create_user(): void
     {
         $this->seedDepartements();
         $head = $this->makeUser('head', 1, 'head@test.com');
@@ -100,7 +149,7 @@ class UserManagementTest extends TestCase
     public function test_create_user_requires_unique_email(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
         $this->makeUser('user', 1, 'sudah-ada@office.com');
 
         $response = $this->actingAs($it)->post(route('users.store'), [
@@ -114,16 +163,16 @@ class UserManagementTest extends TestCase
 
     // --- Update profil ---
 
-    public function test_it_can_update_another_users_profile(): void
+    public function test_manager_can_update_another_users_profile(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
         $target = $this->makeUser('user', 1, 'user-a@test.com');
 
         $response = $this->actingAs($it)->patch(route('users.update', $target->id), [
             'name' => 'Nama Baru',
             'email' => $target->email,
-            'entity' => 'Kantor Pusat',
+            'entity' => 'PT VISINEMA KONTEN INDONESIA',
             'position' => 'Senior Staff',
             'departement_id' => 1,
             'role' => 'head',
@@ -134,10 +183,32 @@ class UserManagementTest extends TestCase
         $this->assertEquals('head', $target->fresh()->role);
     }
 
-    public function test_it_cannot_change_own_role(): void
+    public function test_manager_can_grant_manage_users_access_to_another_account(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
+        $target = $this->makeUser('head', 1, 'head-a@test.com', ['can_manage_users' => false]);
+
+        $response = $this->actingAs($it)->patch(route('users.update', $target->id), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'entity' => $target->entity,
+            'position' => $target->position,
+            'departement_id' => 1,
+            'role' => 'head',
+            'can_manage_users' => true,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertTrue($target->fresh()->can_manage_users);
+        // Role approval-nya nggak ikut berubah - dua hal ini independen.
+        $this->assertEquals('head', $target->fresh()->role);
+    }
+
+    public function test_manager_cannot_change_own_role(): void
+    {
+        $this->seedDepartements();
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
 
         $response = $this->actingAs($it)->patch(route('users.update', $it->id), [
             'name' => $it->name,
@@ -146,16 +217,39 @@ class UserManagementTest extends TestCase
             'position' => $it->position,
             'departement_id' => 1,
             'role' => 'user',
+            'can_manage_users' => true,
         ]);
 
         $response->assertSessionHasErrors('role');
         $this->assertEquals('it', $it->fresh()->role);
     }
 
-    public function test_it_can_edit_own_profile_fields_other_than_role(): void
+    public function test_manager_cannot_revoke_own_manage_users_access(): void
+    {
+        // Sama kayak proteksi ganti role sendiri: kalau cuma ada satu akun
+        // yang bisa manage user terus dia cabut aksesnya sendiri, nggak ada
+        // lagi yang bisa masuk ke Manajemen User buat ngembaliinnya.
+        $this->seedDepartements();
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
+
+        $response = $this->actingAs($it)->patch(route('users.update', $it->id), [
+            'name' => $it->name,
+            'email' => $it->email,
+            'entity' => $it->entity,
+            'position' => $it->position,
+            'departement_id' => 1,
+            'role' => 'it',
+            'can_manage_users' => false,
+        ]);
+
+        $response->assertSessionHasErrors('can_manage_users');
+        $this->assertTrue($it->fresh()->can_manage_users);
+    }
+
+    public function test_manager_can_edit_own_profile_fields_other_than_role_and_access(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
 
         $response = $this->actingAs($it)->patch(route('users.update', $it->id), [
             'name' => 'IT Admin Baru',
@@ -164,6 +258,7 @@ class UserManagementTest extends TestCase
             'position' => 'Head of IT',
             'departement_id' => 1,
             'role' => 'it',
+            'can_manage_users' => true,
         ]);
 
         $response->assertRedirect();
@@ -173,10 +268,10 @@ class UserManagementTest extends TestCase
 
     // --- Reset password ---
 
-    public function test_it_can_reset_another_users_password_to_default(): void
+    public function test_manager_can_reset_another_users_password_to_default(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
         $target = $this->makeUser('user', 1, 'user-a@test.com');
 
         $response = $this->actingAs($it)->post(route('users.reset-password', $target->id));
@@ -185,7 +280,7 @@ class UserManagementTest extends TestCase
         $this->assertTrue(Hash::check(User::defaultPassword(), $target->fresh()->password));
     }
 
-    public function test_non_it_cannot_reset_password(): void
+    public function test_non_manager_cannot_reset_password(): void
     {
         $this->seedDepartements();
         $head = $this->makeUser('head', 1, 'head@test.com');
@@ -200,10 +295,10 @@ class UserManagementTest extends TestCase
 
     // --- Nonaktifkan / aktifkan akun ---
 
-    public function test_it_can_deactivate_another_users_account(): void
+    public function test_manager_can_deactivate_another_users_account(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
         $target = $this->makeUser('user', 1, 'user-a@test.com');
 
         $response = $this->actingAs($it)->post(route('users.toggle-active', $target->id));
@@ -212,10 +307,10 @@ class UserManagementTest extends TestCase
         $this->assertFalse($target->fresh()->is_active);
     }
 
-    public function test_it_can_reactivate_a_deactivated_account(): void
+    public function test_manager_can_reactivate_a_deactivated_account(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
         $target = $this->makeUser('user', 1, 'user-a@test.com', ['is_active' => false]);
 
         $response = $this->actingAs($it)->post(route('users.toggle-active', $target->id));
@@ -224,10 +319,10 @@ class UserManagementTest extends TestCase
         $this->assertTrue($target->fresh()->is_active);
     }
 
-    public function test_it_cannot_deactivate_own_account(): void
+    public function test_manager_cannot_deactivate_own_account(): void
     {
         $this->seedDepartements();
-        $it = $this->makeUser('it', 1, 'it@test.com');
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
 
         $response = $this->actingAs($it)->post(route('users.toggle-active', $it->id));
 
@@ -269,5 +364,69 @@ class UserManagementTest extends TestCase
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    // --- Perusahaan (entity) dikunci ke daftar resmi di App\Models\User::ENTITIES ---
+
+    public function test_perusahaan_di_luar_daftar_resmi_ditolak_saat_membuat_akun(): void
+    {
+        $this->seedDepartements();
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
+
+        $response = $this->actingAs($it)->post(route('users.store'), [
+            'name' => 'Karyawan Baru',
+            'email' => 'baru@office.com',
+            'entity' => 'PT PERUSAHAAN KARANGAN',
+            'position' => 'Staff',
+            'departement_id' => 1,
+            'role' => 'user',
+        ]);
+
+        $response->assertSessionHasErrors('entity');
+        $this->assertDatabaseMissing('master_employees', ['email' => 'baru@office.com']);
+    }
+
+    /**
+     * Akun lama hasil impor bisa saja punya nama perusahaan di luar daftar.
+     * Admin yang cuma mau membetulkan nama orangnya tidak boleh sampai
+     * terhalang validasi - nilai lamanya tetap diizinkan.
+     */
+    public function test_perusahaan_lama_di_luar_daftar_tetap_boleh_saat_mengedit(): void
+    {
+        $this->seedDepartements();
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
+        $target = $this->makeUser('user', 1, 'lama@test.com', ['entity' => 'PT LAMA TIDAK TERDAFTAR']);
+
+        $response = $this->actingAs($it)->patch(route('users.update', $target->id), [
+            'name' => 'Nama Dibetulkan',
+            'email' => $target->email,
+            'entity' => 'PT LAMA TIDAK TERDAFTAR',
+            'position' => $target->position,
+            'departement_id' => 1,
+            'role' => 'user',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertEquals('Nama Dibetulkan', $target->fresh()->name);
+        $this->assertEquals('PT LAMA TIDAK TERDAFTAR', $target->fresh()->entity);
+    }
+
+    public function test_perusahaan_lama_milik_orang_lain_tidak_ikut_diizinkan(): void
+    {
+        $this->seedDepartements();
+        $it = $this->makeUser('it', 1, 'it@test.com', ['can_manage_users' => true]);
+        $this->makeUser('user', 1, 'punya-lama@test.com', ['entity' => 'PT LAMA TIDAK TERDAFTAR']);
+        $target = $this->makeUser('user', 1, 'target@test.com');
+
+        $response = $this->actingAs($it)->patch(route('users.update', $target->id), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'entity' => 'PT LAMA TIDAK TERDAFTAR',
+            'position' => $target->position,
+            'departement_id' => 1,
+            'role' => 'user',
+        ]);
+
+        $response->assertSessionHasErrors('entity');
     }
 }

@@ -1,8 +1,11 @@
 import InputError from '@/Components/InputError';
+import PreferenceImageField from '@/Components/PreferenceImageField';
 import PrimaryButton from '@/Components/PrimaryButton';
-import { useForm } from '@inertiajs/react';
+import SignatureGate from '@/Components/SignatureGate';
+import { useForm, usePage } from '@inertiajs/react';
 
 const SoftwareForm = () => {
+    const user = usePage().props.auth.user;
     const today = new Date().toISOString().split('T')[0];
     const { data, setData, post, processing, errors } = useForm({
         request_date: today,
@@ -12,6 +15,7 @@ const SoftwareForm = () => {
         license_count: '',
         duration_months: '',
         estimated_cost: '',
+        preference_image: null,
         justification: '',
         digital_signature: false,
     });
@@ -167,6 +171,13 @@ const SoftwareForm = () => {
                     </div>
                 </div>
 
+                <PreferenceImageField
+                    value={data.preference_image}
+                    onChange={(file) => setData('preference_image', file)}
+                    error={errors.preference_image}
+                    hint="Tangkapan layar halaman harga atau paket lisensinya, supaya finance tahu persis yang akan dibayar."
+                />
+
                 <div>
                     <label className="form-label">
                         Alasan Pengajuan &amp; Jelaskan Spesifikasi Khusus (Jika
@@ -182,6 +193,8 @@ const SoftwareForm = () => {
                     ></textarea>
                     <InputError message={errors.justification} />
                 </div>
+
+                <SignatureGate />
 
                 <div className="flex items-start gap-3 rounded-[14px] border border-line bg-surface-sunken px-4 py-3.5">
                     <input
@@ -207,7 +220,11 @@ const SoftwareForm = () => {
                 <div className="flex justify-end border-t border-line pt-[18px]">
                     <PrimaryButton
                         type="submit"
-                        disabled={!data.digital_signature || processing}
+                        disabled={
+                            !data.digital_signature ||
+                            !user.has_signature ||
+                            processing
+                        }
                     >
                         {processing ? 'Mengirim...' : 'Kirim Pengajuan'}
                     </PrimaryButton>

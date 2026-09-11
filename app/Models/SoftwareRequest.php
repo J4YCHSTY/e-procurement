@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasRequestTimeline;
 use Illuminate\Database\Eloquent\Model;
 
 class SoftwareRequest extends Model
 {
+    use HasRequestTimeline;
+
     protected $fillable = [
         'user_id',
         'request_date',
@@ -21,11 +24,28 @@ class SoftwareRequest extends Model
         'rejected_by_id',
         'rejected_at',
         'rejected_at_stage',
+        'item_identifier',
+        'handed_over_at',
+        'handed_over_by_id',
+        'bast_signed_at',
     ];
+
+    protected $appends = ['detail_url'];
 
     protected $casts = [
         'rejected_at' => 'datetime',
+        'handed_over_at' => 'datetime',
+        'bast_signed_at' => 'datetime',
     ];
+
+    /**
+     * Segmen URL yang mewakili jenis pengajuan ini. Dipakai HasRequestTimeline
+     * buat menyusun tautan detailnya.
+     */
+    public function requestTypeKey(): string
+    {
+        return 'software';
+    }
 
     public function user()
     {
